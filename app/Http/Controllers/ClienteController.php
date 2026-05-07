@@ -24,6 +24,7 @@ class ClienteController extends Controller
             $query->whereHas('persona', function($q) use ($search) {
                 $q->where('nombre', 'like', "%{$search}%")
                   ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                   ->orWhere('apellido_materno', 'like', "%{$search}%")
                   ->orWhere('numero_documento', 'like', "%{$search}%");
             });
         }
