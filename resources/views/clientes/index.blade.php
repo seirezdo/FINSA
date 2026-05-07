@@ -6,7 +6,10 @@
                     <h2 class="text-xl font-semibold text-gray-800">Gestión de Clientes</h2>
                     <input type="text" id="search" placeholder="Buscar por nombre o documento..." 
                            class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 w-1/3">
-                </div>
+             <a href="{{ route('clientes.create') }}" class="btn btn-primary">
+    Nuevo Cliente
+</a>
+                        </div>
 
                 <div id="table-container">
                     @include('clientes.partials.table')

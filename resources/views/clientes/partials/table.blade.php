@@ -9,7 +9,7 @@
     <tbody class="bg-white divide-y divide-gray-200">
         @forelse($clientes as $cliente)
             <tr>
-                <td class="px-6 py-4">{{ $cliente->persona->nombre }} {{ $cliente->persona->apellido_paterno }}</td>
+                <td class="px-6 py-4">{{ $cliente->persona->nombre }} {{ $cliente->persona->apellido_paterno }} {{ $cliente->persona->apellido_materno }}</td>
                 <td class="px-6 py-4">{{ $cliente->persona->numero_documento }}</td>
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">

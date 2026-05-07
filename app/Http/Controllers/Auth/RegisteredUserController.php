@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Models\Persona;
+use Illuminate\Support\Facades\DB;
 
 class RegisteredUserController extends Controller
 {
@@ -28,24 +30,37 @@ class RegisteredUserController extends Controller
      *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+public function store(Request $request): RedirectResponse
+{
+    $request->validate([
+        'nombre' => ['required', 'string', 'max:100'],
+        'apellido_paterno' => ['required', 'string', 'max:100'],
+        'apellido_materno' => ['nullable', 'string', 'max:100'], // Validación opcional
+        'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+        'password' => ['required', 'confirmed', Rules\Password::defaults()],
+    ]);
+
+    $user = DB::transaction(function () use ($request) {
+        // Creamos la Persona con los datos mínimos
+        $persona = Persona::create([
+            'nombre' => $request->nombre,
+            'apellido_paterno' => $request->apellido_paterno,
+            'apellido_materno' => $request->apellido_materno, // Puede ser null
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
+        // Creamos el Usuario vinculado
+        return User::create([
+            'name' => $request->nombre . ' ' . $request->apellido_paterno . ' ' . $request->apellido_materno,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'persona_id' => $persona->id,
+            'estado' => 'activo',
         ]);
+    });
 
-        event(new Registered($user));
+    event(new Registered($user));
+    Auth::login($user);
 
-        Auth::login($user);
-
-        return redirect(route('dashboard', absolute: false));
-    }
+    return redirect(route('dashboard', absolute: false));
+}
 }

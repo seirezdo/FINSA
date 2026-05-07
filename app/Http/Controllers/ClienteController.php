@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Persona;
+use App\Models\Cliente;
+use App\Http\Requests\StoreClienteRequest;
+use Illuminate\Support\Facades\DB;
 
 class ClienteController extends Controller
 {
-  
+  public function create() {
+    return view('clientes.create');
+}
       public function index(Request $request)
     {
         // Iniciamos la consulta cargando la relación 'persona' para optimizar [2, 3]
@@ -32,21 +38,25 @@ class ClienteController extends Controller
         return view('clientes.index', compact('clientes'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+   
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+    public function store(StoreClienteRequest $request) {
+    DB::transaction(function () use ($request) {
+        // 1. Creamos la Persona
+        $persona = Persona::create($request->only([
+            'nombre', 'apellido_paterno', 'numero_documento', 'apellido_materno', 'telefono', 'direccion'
+        ]));
+
+        // 2. Creamos el Cliente vinculado a esa Persona
+        $persona->cliente()->create([
+            'fecha_registro' => $request->fecha_registro,
+            'perfil_riesgo' => $request->perfil_riesgo,
+            'estado' => 'activo'
+        ]);
+    });
+
+    return redirect()->route('clientes.index')->with('success', 'Cliente registrado exitosamente.');
+}
 
     /**
      * Display the specified resource.
