@@ -1,31 +1,26 @@
-    <?php
+<?php
 
-    use Illuminate\Database\Migrations\Migration;
-    use Illuminate\Database\Schema\Blueprint;
-    use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-    return new class extends Migration
-    {
-        /**
-         * Run the migrations.
-         */
-      public function up(): void
+return new class extends Migration
+{
+   public function up(): void
 {
     Schema::create('users', function (Blueprint $table) {
         $table->id();
-        // Conexión obligatoria con tu tabla raíz
-        $table->foreignId('persona_id')->nullable()->constrained('personas')->onDelete('set null');
-        
-        $table->string('name'); 
-        $table->string('email')->unique(); // Columna crítica para Breeze
+        $table->foreignId('persona_id')->constrained('personas')->onDelete('cascade');
+        $table->string('name');
+        $table->string('email')->unique();
         $table->timestamp('email_verified_at')->nullable();
         $table->string('password');
-        $table->string('estado', 20)->default('activo'); // Tu campo personalizado
+        $table->string('role')->default('cliente'); // Rol base decidido [5]
+        $table->string('estado', 20)->default('activo');
         $table->rememberToken();
         $table->timestamps();
     });
 
-    // Estas tablas son necesarias para el funcionamiento de Breeze
     Schema::create('password_reset_tokens', function (Blueprint $table) {
         $table->string('email')->primary();
         $table->string('token');
@@ -42,13 +37,11 @@
     });
 }
 
-        /**
-         * Reverse the migrations.
-         */
-        public function down(): void
-        {
-            Schema::dropIfExists('users');
-            Schema::dropIfExists('password_reset_tokens');
-            Schema::dropIfExists('sessions');
-        }
-    };
+public function down(): void
+{
+    Schema::dropIfExists('sessions');
+    Schema::dropIfExists('password_reset_tokens');
+    Schema::dropIfExists('users');
+    // NO borramos personas aquí porque tiene su propia migración
+}
+};

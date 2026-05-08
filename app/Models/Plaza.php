@@ -3,16 +3,35 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Plaza extends Model
 {
-    // Campos que se pueden llenar para Plaza
-    protected $fillable = ['nombre', 'zona', 'ejecutivo_id', 'supervisora_id', 'estado'];
+    use SoftDeletes; // Permite el borrado lógico [3]
 
-    // Una Plaza tiene muchos Grupos
-    public function grupos()
+    // Campos que permitimos llenar desde formularios (Mass Assignment) [4]
+    protected $fillable = [
+        'nombre', 
+        'zona', 
+        'ejecutivo_id', 
+        'supervisora_id', 
+        'estado'
+    ];
+
+    /**
+     * Relación con el Ejecutivo (Persona).
+     */
+    public function ejecutivo(): BelongsTo
     {
-        return $this->hasMany(Grupo::class);
+        return $this->belongsTo(Persona::class, 'ejecutivo_id');
+    }
+
+    /**
+     * Relación con la Supervisora (Persona).
+     */
+    public function supervisora(): BelongsTo
+    {
+        return $this->belongsTo(Persona::class, 'supervisora_id');
     }
 }
-    

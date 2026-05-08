@@ -1,4 +1,9 @@
 <x-app-layout>
+    @if(auth()->user()->role !== \App\Enums\UserRole::CLIENTE)
+    <button class="bg-blue-600 text-white px-4 py-2 rounded">
+        Gestión Administrativa
+    </button>
+@endif
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white p-6 shadow sm:rounded-lg">
@@ -13,6 +18,10 @@
                         <div>
                             <label>Apellido Paterno</label>
                             <input type="text" name="apellido_paterno" class="w-full border-gray-300 rounded-md" required>
+                        </div>
+                         <div>
+                            <label>Apellido Materno</label>
+                            <input type="text" name="apellido_materno" class="w-full border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label>N° Documento (CURP/INE)</label>

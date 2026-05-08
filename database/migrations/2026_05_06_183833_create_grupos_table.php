@@ -11,17 +11,17 @@ return new class extends Migration
      */
 public function up(): void
 {
-    Schema::create('grupos', function (Blueprint $table) {
-        $table->id();
-        $table->string('nombre', 100);
-        // Un grupo siempre pertenece a una plaza
-        $table->foreignId('plaza_id')->constrained('plazas')->onDelete('cascade');
-        // El grupo tiene una promotora (que es una persona)
-        $table->foreignId('promotora_id')->nullable()->constrained('personas');
-        $table->string('estado', 20)->default('activo');
-        $table->date('fecha_creacion');
-        $table->timestamps();
-    });
+   Schema::create('grupos', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('plaza_id')->constrained('plazas');
+    $table->foreignId('promotora_id')->nullable()->constrained('personas');
+    $table->string('nombre', 100);
+    $table->integer('dia_cobro'); // Agregado para resolver el error del Seeder
+    $table->string('estado', 20)->default('FORMACION');
+    $table->date('fecha_creacion')->useCurrent(); 
+    $table->timestamps();
+    $table->softDeletes();
+});
 }
 
     /**

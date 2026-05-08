@@ -7,23 +7,25 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
-
+use App\Enums\UserRole;
 #[Fillable(['name', 'email', 'password', 'persona_id', 'estado', 'role'])] // Permite guardar estos campos [5]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+   
+use HasFactory, Notifiable;
 
     /**
      * Atributos que deben ser casteados.
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed', // Asegura el encriptado bcrypt [6]
-        ];
-    }
+  protected function casts(): array
+{
+    return [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'role' => UserRole::class, // Convierte el string 'cliente' a Enum automáticamente
+    ];
+}
 
     /**
      * Relación Eloquent: Un Usuario pertenece a una Persona.
@@ -33,4 +35,5 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Persona::class);
     }
+    
 }
