@@ -20,4 +20,5 @@ enum UserRole: string
             self::CLIENTE => 'Cliente Beneficiario',
         };
     }
+    
 }

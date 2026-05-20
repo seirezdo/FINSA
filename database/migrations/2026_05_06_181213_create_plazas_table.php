@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('plazas', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100)->unique();
-            $table->string('zona', 100);
+          $table->string('zona', 100)->nullable();
             
             // Relaciones con la tabla personas para ejecutivo y supervisora
             $table->foreignId('ejecutivo_id')->nullable()->constrained('personas');

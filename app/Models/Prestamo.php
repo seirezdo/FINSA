@@ -24,4 +24,7 @@ class Prestamo extends Model
     public function grupo() {
         return $this->belongsTo(Grupo::class);
     }
+    public function calendarioPagos() {
+    return $this->hasMany(CalendarioPago::class);
+}
 }

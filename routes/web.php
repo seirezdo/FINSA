@@ -22,6 +22,18 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::resource('plazas', PlazaController::class);
 });
+
+// Solo Admin y Ejecutivo pueden entrar a la gestión de clientes
+Route::middleware(['auth', 'role:admin,ejecutivo'])->group(function () {
+    Route::resource('clientes', ClienteController::class);
+});
+
+Route::middleware(['auth', 'role:admin,ejecutivo,supervisora'])->group(function () {
+    Route::resource('prestamos', PrestamoController::class);
+     Route::get('/cobranza/grupo/{grupo}', [PagoController::class, 'grupo'])->name('pagos.grupo');
+    Route::post('/pagos/registrar', [PagoController::class, 'store'])->name('pagos.store');
+});
+
 Route::resource('clientes', ClienteController::class)->middleware(['auth']);
 
 

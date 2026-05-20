@@ -11,14 +11,21 @@ class Cliente extends Model
     protected $primaryKey = 'persona_id';
     public $incrementing = false;
 
-    protected $fillable = [
-        'persona_id', 'fecha_registro', 'estado', 
-        'kyc_completado', 'geolocalizacion_domicilio', 'perfil_riesgo'
-    ];
+  protected $fillable = [
+    'persona_id',
+    'grupo_id', // <--- Debe estar aquí para permitir el seeding
+    'curp',
+    'estado'
+];
 
     // Relación: Un Cliente pertenece a una Persona
     public function persona(): BelongsTo
     {
         return $this->belongsTo(Persona::class, 'persona_id');
+    }
+      public function grupo(): BelongsTo
+    {
+        // Eloquent buscará automáticamente la columna grupo_id [4, 5]
+        return $this->belongsTo(Grupo::class);
     }
 }

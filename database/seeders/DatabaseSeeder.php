@@ -6,110 +6,80 @@ use App\Models\User;
 use App\Models\Persona;
 use App\Models\Plaza;
 use App\Models\Grupo;
-use App\Enums\UserRole; // Importante para la seguridad de tipos [2]
+use App\Models\Cliente; // Asegúrate de tener este modelo creado [1, 4]
+use App\Enums\UserRole; 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // --- 1. CREACIÓN DE PERSONAS (Identidades Físicas) ---
-        // Primero creamos a los seres humanos que operarán el sistema [1]
+        // --- 1. CREACIÓN DE PERSONAS (Identidades Únicas) ---
+        // Creamos las identidades físicas para cada rol del sistema [1, 5]
         
-        $personaAdmin = Persona::create([
-            'nombre' => 'Admin', 
-            'apellido_paterno' => 'Sistema', 
-            'apellido_materno' => 'Principal',
-            'numero_documento' => '11111111', 
-            'tipo_documento' => 'INE'
-        ]);
+        $pAdmin = Persona::create(['nombre' => 'Admin', 'apellido_paterno' => 'Sistema', 'numero_documento' => '11111111', 'tipo_documento' => 'INE']);
+        $pEjecutivo = Persona::create(['nombre' => 'Juan', 'apellido_paterno' => 'Pérez', 'numero_documento' => '22222222', 'tipo_documento' => 'INE']);
+        
+        // Supervisoras
+        $pSuper1 = Persona::create(['nombre' => 'María', 'apellido_paterno' => 'López', 'numero_documento' => '33333333', 'tipo_documento' => 'INE']);
+        $pSuper2 = Persona::create(['nombre' => 'Rosa', 'apellido_paterno' => 'Díaz', 'numero_documento' => '44444444', 'tipo_documento' => 'INE']);
 
-        $personaEjecutivo = Persona::create([
-            'nombre' => 'Juan', 
-            'apellido_paterno' => 'Pérez', 
-            'apellido_materno' => 'García',
-            'numero_documento' => '22222222', 
-            'tipo_documento' => 'INE'
-        ]);
+        // Promotoras
+        $pPromotora1 = Persona::create(['nombre' => 'Lucía', 'apellido_paterno' => 'Méndez', 'numero_documento' => '55555555', 'tipo_documento' => 'INE']);
+        $pPromotora2 = Persona::create(['nombre' => 'Carmen', 'apellido_paterno' => 'Ortiz', 'numero_documento' => '66666666', 'tipo_documento' => 'INE']);
 
-        $personaSupervisora1 = Persona::create([
-            'nombre' => 'María', 
-            'apellido_paterno' => 'López', 
-            'apellido_materno' => 'Sánchez',
-            'numero_documento' => '33333333', 
-            'tipo_documento' => 'INE'
-        ]);
-
-        $personaSupervisora2 = Persona::create([
-            'nombre' => 'Rosa', 
-            'apellido_paterno' => 'Díaz', 
-            'apellido_materno' => 'Ruiz',
-            'numero_documento' => '44444444', 
-            'tipo_documento' => 'INE'
-        ]);
+        // Clientes (Ejemplo de registro rápido con documentos nullable) [Turnos 20-22]
+        $pCliente1 = Persona::create(['nombre' => 'Sergio', 'apellido_paterno' => 'García', 'numero_documento' => '77777777', 'tipo_documento' => 'INE']);
+        $pCliente2 = Persona::create(['nombre' => 'Beatriz', 'apellido_paterno' => 'Luna', 'numero_documento' => '88888888', 'tipo_documento' => 'INE']);
 
         // --- 2. CREACIÓN DE USUARIOS (Cuentas de Acceso) ---
-        // Vinculamos las identidades con credenciales, usando Enums para los roles [3]
+        // Usamos los Enums para garantizar la seguridad de tipos en los roles [1, 6, 7]
         
-        User::create([
-            'persona_id' => $personaAdmin->id,
-            'name' => 'Admin Principal',
-            'email' => 'admin@prueba.com',
-            'password' => Hash::make('password'), // Siempre encriptada por seguridad [4]
-            'role' => UserRole::ADMIN->value, 
-            'estado' => 'activo'
-        ]);
+        $password = Hash::make('password'); // Encriptación profesional [1, 8]
 
-        User::create([
-            'persona_id' => $personaEjecutivo->id,
-            'name' => 'Juan Ejecutivo',
-            'email' => 'ejecutivo@prueba.com',
-            'password' => Hash::make('password'),
-            'role' => UserRole::EJECUTIVO->value, 
-            'estado' => 'activo'
-        ]);
+        User::create(['persona_id' => $pAdmin->id, 'name' => 'Admin', 'email' => 'admin@prueba.com', 'password' => $password, 'role' => UserRole::ADMIN->value]);
+        User::create(['persona_id' => $pEjecutivo->id, 'name' => 'Juan', 'email' => 'ejecutivo@prueba.com', 'password' => $password, 'role' => UserRole::EJECUTIVO->value]);
+        
+        // Cuentas para Supervisoras
+        User::create(['persona_id' => $pSuper1->id, 'name' => 'María', 'email' => 'super1@prueba.com', 'password' => $password, 'role' => UserRole::SUPERVISORA->value]);
+        User::create(['persona_id' => $pSuper2->id, 'name' => 'Rosa', 'email' => 'super2@prueba.com', 'password' => $password, 'role' => UserRole::SUPERVISORA->value]);
 
-        // --- 3. CREACIÓN DE PLAZAS (Jerarquía Operativa) ---
-        // Ahora que tenemos al Ejecutivo y Supervisoras, creamos las Plazas [1]
+        // Cuentas para Promotoras
+        User::create(['persona_id' => $pPromotora1->id, 'name' => 'Lucía', 'email' => 'promo1@prueba.com', 'password' => $password, 'role' => UserRole::PROMOTORA->value]);
+        User::create(['persona_id' => $pPromotora2->id, 'name' => 'Carmen', 'email' => 'promo2@prueba.com', 'password' => $password, 'role' => UserRole::PROMOTORA->value]);
+
+        // --- 3. ESTRUCTURA OPERATIVA (Plazas y Grupos) ---
         
         $plazaCentro = Plaza::create([
             'nombre' => 'Plaza Centro',
-            'zona' => 'Centro Histórico',
-            'ejecutivo_id' => $personaEjecutivo->id,
-            'supervisora_id' => $personaSupervisora1->id,
+            'ejecutivo_id' => $pEjecutivo->id,
+            'supervisora_id' => $pSuper1->id,
             'estado' => 'activo'
         ]);
 
-        $plazaNorte = Plaza::create([
-            'nombre' => 'Plaza Norte',
-            'zona' => 'Valle del Norte',
-            'ejecutivo_id' => $personaEjecutivo->id,
-            'supervisora_id' => $personaSupervisora2->id,
-            'estado' => 'activo'
-        ]);
-
-        // --- 4. CREACIÓN DE GRUPOS (Unidades de Cobranza) ---
-        // Finalmente creamos los grupos, ahora que las Plazas ya existen en variables [5, 6]
-        
-        Grupo::create([
+        $grupoLealtad = Grupo::create([
             'plaza_id' => $plazaCentro->id,
             'nombre' => 'Grupo Lealtad',
             'dia_cobro' => 1, // Lunes
-            'fecha_creacion' => now(),
             'estado' => 'ACTIVO'
         ]);
 
-        Grupo::create([
-            'plaza_id' => $plazaNorte->id,
-            'nombre' => 'Grupo Esfuerzo',
-            'dia_cobro' => 3, // Miércoles
-            'fecha_creacion' => now(),
-            'estado' => 'ACTIVO'
+        // --- 4. ASIGNACIÓN DE CLIENTES ---
+        // Los clientes se vinculan a un grupo específico [1, 3]
+        
+        Cliente::create([
+            'persona_id' => $pCliente1->id,
+            'grupo_id' => $grupoLealtad->id,
+            'curp' => 'GARS010101HDFRR01', // El CURP debe ser único para evitar fraude [1, 3]
+            'estado' => 'activo'
+        ]);
+
+        Cliente::create([
+            'persona_id' => $pCliente2->id,
+            'grupo_id' => $grupoLealtad->id,
+            'curp' => 'LUNB020202MDFRR02',
+            'estado' => 'activo'
         ]);
     }
-    
 }
