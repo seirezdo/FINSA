@@ -2,84 +2,118 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use Illuminate\Database\Seeder;
 use App\Models\Persona;
+use App\Models\User;
 use App\Models\Plaza;
 use App\Models\Grupo;
-use App\Models\Cliente; // Asegúrate de tener este modelo creado [1, 4]
-use App\Enums\UserRole; 
-use Illuminate\Database\Seeder;
+use App\Models\Cliente;
+use App\Models\Prestamo;
+use App\Models\CalendarioPago;
+use App\Models\Pago;
+use App\Enums\UserRole;
 use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // --- 1. CREACIÓN DE PERSONAS (Identidades Únicas) ---
-        // Creamos las identidades físicas para cada rol del sistema [1, 5]
-        
+        $password = Hash::make('password');
+
+        // --- 1. PERSONAS Y USUARIOS (ADMIN Y EJECUTIVOS) ---
         $pAdmin = Persona::create(['nombre' => 'Admin', 'apellido_paterno' => 'Sistema', 'numero_documento' => '11111111', 'tipo_documento' => 'INE']);
-        $pEjecutivo = Persona::create(['nombre' => 'Juan', 'apellido_paterno' => 'Pérez', 'numero_documento' => '22222222', 'tipo_documento' => 'INE']);
-        
-        // Supervisoras
-        $pSuper1 = Persona::create(['nombre' => 'María', 'apellido_paterno' => 'López', 'numero_documento' => '33333333', 'tipo_documento' => 'INE']);
-        $pSuper2 = Persona::create(['nombre' => 'Rosa', 'apellido_paterno' => 'Díaz', 'numero_documento' => '44444444', 'tipo_documento' => 'INE']);
-
-        // Promotoras
-        $pPromotora1 = Persona::create(['nombre' => 'Lucía', 'apellido_paterno' => 'Méndez', 'numero_documento' => '55555555', 'tipo_documento' => 'INE']);
-        $pPromotora2 = Persona::create(['nombre' => 'Carmen', 'apellido_paterno' => 'Ortiz', 'numero_documento' => '66666666', 'tipo_documento' => 'INE']);
-
-        // Clientes (Ejemplo de registro rápido con documentos nullable) [Turnos 20-22]
-        $pCliente1 = Persona::create(['nombre' => 'Sergio', 'apellido_paterno' => 'García', 'numero_documento' => '77777777', 'tipo_documento' => 'INE']);
-        $pCliente2 = Persona::create(['nombre' => 'Beatriz', 'apellido_paterno' => 'Luna', 'numero_documento' => '88888888', 'tipo_documento' => 'INE']);
-
-        // --- 2. CREACIÓN DE USUARIOS (Cuentas de Acceso) ---
-        // Usamos los Enums para garantizar la seguridad de tipos en los roles [1, 6, 7]
-        
-        $password = Hash::make('password'); // Encriptación profesional [1, 8]
-
         User::create(['persona_id' => $pAdmin->id, 'name' => 'Admin', 'email' => 'admin@prueba.com', 'password' => $password, 'role' => UserRole::ADMIN->value]);
-        User::create(['persona_id' => $pEjecutivo->id, 'name' => 'Juan', 'email' => 'ejecutivo@prueba.com', 'password' => $password, 'role' => UserRole::EJECUTIVO->value]);
-        
-        // Cuentas para Supervisoras
-        User::create(['persona_id' => $pSuper1->id, 'name' => 'María', 'email' => 'super1@prueba.com', 'password' => $password, 'role' => UserRole::SUPERVISORA->value]);
-        User::create(['persona_id' => $pSuper2->id, 'name' => 'Rosa', 'email' => 'super2@prueba.com', 'password' => $password, 'role' => UserRole::SUPERVISORA->value]);
 
-        // Cuentas para Promotoras
-        User::create(['persona_id' => $pPromotora1->id, 'name' => 'Lucía', 'email' => 'promo1@prueba.com', 'password' => $password, 'role' => UserRole::PROMOTORA->value]);
-        User::create(['persona_id' => $pPromotora2->id, 'name' => 'Carmen', 'email' => 'promo2@prueba.com', 'password' => $password, 'role' => UserRole::PROMOTORA->value]);
+        $ejecutivos = [];
+        foreach(['Juan', 'Pedro', 'Luis'] as $nombre) {
+            $p = Persona::create(['nombre' => $nombre, 'apellido_paterno' => 'Pérez', 'numero_documento' => rand(1000,9999), 'tipo_documento' => 'INE']);
+            $ejecutivos[] = User::create(['persona_id' => $p->id, 'name' => $nombre, 'email' => strtolower($nombre).'@prueba.com', 'password' => $password, 'role' => UserRole::EJECUTIVO->value]);
+        }
 
-        // --- 3. ESTRUCTURA OPERATIVA (Plazas y Grupos) ---
-        
-        $plazaCentro = Plaza::create([
-            'nombre' => 'Plaza Centro',
-            'ejecutivo_id' => $pEjecutivo->id,
-            'supervisora_id' => $pSuper1->id,
-            'estado' => 'activo'
-        ]);
+        // --- 2. SUPERVISORAS Y PLAZAS (3 registros) ---
+        $plazas = [];
+        foreach(['Centro', 'Norte', 'Sur'] as $idx => $zona) {
+            $pSup = Persona::create(['nombre' => 'Super-'.$zona, 'apellido_paterno' => 'López', 'numero_documento' => rand(1000,9999), 'tipo_documento' => 'INE']);
+            User::create(['persona_id' => $pSup->id, 'name' => 'Super '.$zona, 'email' => 'super'.$idx.'@prueba.com', 'password' => $password, 'role' => UserRole::SUPERVISORA->value]);
 
-        $grupoLealtad = Grupo::create([
-            'plaza_id' => $plazaCentro->id,
-            'nombre' => 'Grupo Lealtad',
-            'dia_cobro' => 1, // Lunes
-            'estado' => 'ACTIVO'
-        ]);
+            $plazas[] = Plaza::create([
+                'nombre' => 'Plaza '.$zona,
+                'ejecutivo_id' => $ejecutivos[$idx]->persona_id,
+                'supervisora_id' => $pSup->id,
+                'estado' => 'activo'
+            ]);
+        }
 
-        // --- 4. ASIGNACIÓN DE CLIENTES ---
-        // Los clientes se vinculan a un grupo específico [1, 3]
-        
-        Cliente::create([
-            'persona_id' => $pCliente1->id,
-            'grupo_id' => $grupoLealtad->id,
-            'curp' => 'GARS010101HDFRR01', // El CURP debe ser único para evitar fraude [1, 3]
-            'estado' => 'activo'
-        ]);
+        // --- 3. GRUPOS (3 registros) ---
+        $grupos = [];
+        foreach(['Lealtad', 'Progreso', 'Éxito'] as $idx => $nom) {
+            $grupos[] = Grupo::create([
+                'plaza_id' => $plazas[$idx]->id,
+                'nombre' => 'Grupo '.$nom,
+                'dia_cobro' => $idx + 1, // Lunes, Martes, Miércoles
+                'estado' => 'ACTIVO'
+            ]);
+        }
 
-        Cliente::create([
-            'persona_id' => $pCliente2->id,
-            'grupo_id' => $grupoLealtad->id,
-            'curp' => 'LUNB020202MDFRR02',
-            'estado' => 'activo'
-        ]);
+        // --- 4. CLIENTES Y PRÉSTAMOS (3 registros con escenarios distintos) ---
+       $clientesData = [
+    ['nombre' => 'Sergio', 'monto' => 2000, 'pagado' => true, 'curp' => 'GARS800101HDFRRN01'],
+    ['nombre' => 'Beatriz', 'monto' => 4000, 'pagado' => false, 'curp' => 'LUNB850202MDFXNB02'],
+    ['nombre' => 'Ricardo', 'monto' => 3000, 'pagado' => false, 'curp' => 'GARR900303HDFRRN03'],
+];
+
+      
+        foreach($clientesData as $idx => $data) {
+    $pCli = Persona::create([
+        'nombre' => $data['nombre'], 
+        'apellido_paterno' => 'García', 
+        'numero_documento' => rand(1000,9999), 
+        'tipo_documento' => 'INE'
+    ]);
+
+    // Ahora enviamos el 'curp' requerido por tu migración [1]
+    $cliente = Cliente::create([
+        'persona_id' => $pCli->id, 
+        'grupo_id' => $grupos[$idx]->id, 
+        'curp' => $data['curp'], // <--- LÍNEA CORREGIDA
+        'estado' => 'activo'
+    ]);
+            // Creamos el préstamo con los nombres de columna corregidos [Conversación previa]
+            $montoTotal = $data['monto'] * 1.20; // 20% de interés de ejemplo
+            $prestamo = Prestamo::create([
+                'cliente_id' => $cliente->persona_id,
+                'aval_id' => $pAdmin->id, // Admin como aval para el ejemplo
+                'grupo_id' => $grupos[$idx]->id,
+                'monto_prestado' => $data['monto'],
+                'monto_total_pagar' => $montoTotal,
+                'tasa_interes' => 20.00,
+                'semanas' => 12,
+                'fecha_inicio' => now()->subWeeks(12),
+                'estado' => $data['pagado'] ? 'liquidado' : 'activo'
+            ]);
+
+            // Crear el Calendario (12 semanas)
+            $cuotaSemanal = $montoTotal / 12;
+            for ($i = 1; $i <= 12; $i++) {
+                $cuota = CalendarioPago::create([
+                    'prestamo_id' => $prestamo->id,
+                    'numero_semana' => $i,
+                    'monto_esperado' => $cuotaSemanal,
+                    'fecha_vencimiento' => Carbon::parse($prestamo->fecha_inicio)->addWeeks($i),
+                    'estado' => $data['pagado'] ? 'pagado' : 'pendiente'
+                ]);
+
+                // Si el cliente es "cumplido", le creamos pagos reales para que el Dashboard sume [1, 5]
+                if ($data['pagado']) {
+                    Pago::create([
+                        'calendario_pago_id' => $cuota->id,
+                        'monto_pagado' => $cuotaSemanal,
+                        'fecha_pago' => $cuota->fecha_vencimiento,
+                        'registrado_por' => $pAdmin->id
+                    ]);
+                }
+            }
+        }
     }
 }

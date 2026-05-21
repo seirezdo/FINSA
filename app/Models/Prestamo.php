@@ -6,11 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Prestamo extends Model
 {
-    protected $fillable = [
-        'cliente_id', 'aval_id', 'grupo_id', 'monto_total', 
-        'monto_entregado', 'tasa_interes', 'fecha_inicio', 
-        'semanas', 'estado', 'es_extendido', 'fecha_recuperado'
-    ];
+   protected $fillable = [
+    'cliente_id',
+    'aval_id',
+    'grupo_id',
+    'monto_total_pagar',
+    'monto_prestado',
+    'tasa_interes',
+    'fecha_inicio',
+    'semanas',
+    'estado',
+    'es_extendido'
+];
 
     // Relaciones
     public function cliente() {

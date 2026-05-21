@@ -11,6 +11,8 @@ return new class extends Migration
      */
    public function up(): void
 {
+      Schema::dropIfExists('pagos'); 
+    Schema::dropIfExists('calendario_pagos');
     // Tabla para proyectar las 12 semanas (o más si hay mora)
     Schema::create('calendario_pagos', function (Blueprint $table) {
         $table->id();

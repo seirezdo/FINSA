@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Providers;
-
 use Illuminate\Support\ServiceProvider;
-
+use App\Models\Pago;           // IMPORTANTE
+use App\Observers\PagoObserver; // IMPORTANTE
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -19,6 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+      Pago::observe(PagoObserver::class);
     }
 }

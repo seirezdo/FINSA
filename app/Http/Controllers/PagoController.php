@@ -47,9 +47,18 @@ public function registrarPago(Request $request)
 
     return back()->with('success', 'Pago registrado correctamente.');
 }
-    /**
-     * Display a listing of the resource.
-     */
+     public function grupo(Grupo $grupo)
+    {
+        // Cargamos los clientes del grupo con su préstamo activo y la cuota pendiente [5, 6]
+        $clientes = $grupo->clientes()->with(['persona', 'prestamos' => function($q) {
+            $q->where('estado', 'activo')->with(['calendarioPagos' => function($cq) {
+                $cq->where('estado', 'pendiente')->orderBy('numero_semana', 'asc');
+            }]);
+        }])->get();
+
+        return view('prestamos.pagos.grupo', compact('grupo', 'clientes'));
+    }
+
     public function index()
     {
         //
@@ -66,56 +75,63 @@ public function registrarPago(Request $request)
     /**
      * Store a newly created resource in storage.
      */
-   public function store(Request $request)
-{
-    // 1. Validación estricta del pago
-    $request->validate([
-        'calendario_pago_id' => 'required|exists:calendario_pagos,id',
-        'monto_pagado' => 'required|numeric|min:0',
-    ]);
-
-    return DB::transaction(function () use ($request) {
-        $cuota = CalendarioPago::with('prestamo')->findOrFail($request->calendario_pago_id);
-        $prestamo = $cuota->prestamo;
-
-        // 2. Registrar el pago en la tabla de auditoría financiera
-        $pago = Pago::create([
-            'calendario_pago_id' => $cuota->id,
-            'monto_pagado' => $request->monto_pagado,
-            'fecha_pago' => now(),
-            'registrado_por' => auth()->id(),
+  public function store(Request $request)
+    {
+        $request->validate([
+            'calendario_pago_id' => 'required|exists:calendario_pagos,id',
+            'monto_pagado' => 'required|numeric|min:0',
         ]);
 
-        // 3. Lógica de Negocio: 12.5% completo o Mora
-        if ($request->monto_pagado >= $cuota->monto_esperado) {
-            $cuota->update(['estado' => 'pagado']);
-        } else {
-            // REGLA: Si paga parcial o no paga, la semana es FALLIDA y se extiende el crédito
-            $cuota->update(['estado' => 'parcial']);
-            
-            // Calculamos la siguiente semana disponible
-            $ultimaSemana = $prestamo->calendarioPagos()->max('numero_semana');
-            
-            $prestamo->calendarioPagos()->create([
-                'numero_semana' => $ultimaSemana + 1,
-                'fecha_vencimiento' => $cuota->fecha_vencimiento->addWeeks(1),
-                'monto_esperado' => $cuota->monto_esperado, // Mantenemos el 12.5% original
-                'estado' => 'pendiente',
-            ]);
-        }
+        // Usamos una transacción para asegurar la integridad financiera [1, 7]
+        return DB::transaction(function () use ($request) {
+            $cuota = CalendarioPago::with('prestamo')->findOrFail($request->calendario_pago_id);
+            $prestamo = $cuota->prestamo;
 
-        return back()->with('success', 'Pago procesado y calendario actualizado.');
-    });
-}
+            // 1. Registrar el flujo de efectivo
+            Pago::create([
+                'calendario_pago_id' => $cuota->id,
+                'monto_pagado' => $request->monto_pagado,
+                'fecha_pago' => now(),
+                'registrado_por' => auth()->id(),
+            ]);
+
+            // 2. Aplicar Regla del 12.5%
+            if ($request->monto_pagado >= $cuota->monto_esperado) {
+                $cuota->update(['estado' => 'pagado']);
+                $mensaje = 'Pago completo registrado.';
+            } else {
+                // Lógica de Mora: Si el pago es parcial o nulo, se extiende el crédito [1]
+                $cuota->update(['estado' => 'parcial']);
+                
+                $nuevaSemanaNum = $prestamo->calendarioPagos()->max('numero_semana') + 1;
+                
+                $prestamo->calendarioPagos()->create([
+                    'numero_semana' => $nuevaSemanaNum,
+                    'fecha_vencimiento' => now()->addWeeks($nuevaSemanaNum),
+                    'monto_esperado' => $cuota->monto_esperado, // Cuota fija del 12.5%
+                    'estado' => 'pendiente',
+                ]);
+                
+                $mensaje = "Pago parcial. Se ha generado la semana {$nuevaSemanaNum} por mora.";
+            }
+
+            return back()->with('success', $mensaje);
+        });
+    }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
-    {
-        //
-    }
+   public function show(Prestamo $prestamo)
+{
+    // Cargamos el préstamo con su cliente y el calendario ordenado
+    // También incluimos los pagos realizados en cada cuota
+    $prestamo->load(['cliente.persona', 'calendarioPagos' => function($query) {
+        $query->orderBy('numero_semana', 'asc')->with('pagos');
+    }]);
 
+    return view('prestamos.show', compact('prestamo'));
+}
     /**
      * Show the form for editing the specified resource.
      */
