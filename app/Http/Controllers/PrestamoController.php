@@ -121,9 +121,14 @@ public function reporteCarteraVigente()
 }
 public function show(Prestamo $prestamo)
 {
-    // Usamos load() porque el modelo ya está instanciado. 
-    // Esto carga las relaciones necesarias en una sola consulta adicional [2, 3].
-    $prestamo->load(['cliente.persona', 'calendarioPagos.pagos', 'grupo']);
+    // Usamos load() porque el modelo ya está instanciado por Route Model Binding [1].
+    // Cargamos exactamente los datos que necesita la vista para evitar el problema N+1.
+    $prestamo->load([
+        'cliente.persona',       // Datos del cliente en el encabezado
+        'grupo',                 // (Opcional, si lo usas en la vista)
+        'pagos.cuota',           // Para mostrar el número de semana de cada pago
+        'pagos.usuario.persona'  // Para la auditoría: ver quién registró cada pago
+    ]);
 
     return view('prestamos.show', compact('prestamo'));
 }

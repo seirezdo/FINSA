@@ -11,13 +11,13 @@ class Pago extends Model
 {
     // 1. Definimos los campos que se pueden llenar masivamente [2, 3]
     // Esto es vital para que el PagoController pueda guardar datos
-    protected $fillable = [
+   protected $fillable = [
         'calendario_pago_id', 
         'monto_pagado', 
         'fecha_pago', 
+        'metodo_pago', 
         'registrado_por'
     ];
-
     /**
      * 2. Relación Inversa: Un pago pertenece a una cuota del calendario [1, 4]
      */
@@ -33,4 +33,10 @@ class Pago extends Model
     {
         return $this->belongsTo(User::class, 'registrado_por');
     }
+     public function cuota() 
+    {
+        // Usamos belongsTo (Pertenece a) y especificamos la clave foránea [2, 3]
+        return $this->belongsTo(CalendarioPago::class, 'calendario_pago_id');
+    }
+    
 }

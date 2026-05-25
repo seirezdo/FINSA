@@ -21,73 +21,66 @@ class ClienteController extends Controller
     /**
      * Muestra el listado de clientes con búsqueda y paginación.
      */
+  
    public function index(Request $request)
-{
-    $user = auth()->user();
+    {
+        // 1. Optimización (Evitar N+1): Cargamos las relaciones por adelantado [5-7]
+        $query = Cliente::with(['persona', 'grupo.plaza']);
 
-    // 1. Eager loading profundo para evitar N+1 al mostrar Plaza y Grupo [4, 7, 8]
-    $query = Cliente::with(['persona', 'grupo.plaza']); 
-
-    // 2. Aplicar Restricciones de Visibilidad Jerárquica [1, 9]
-    if ($user->role === UserRole::PROMOTORA) {
-        // La promotora solo ve su grupo asignado
-        $query->where('grupo_id', $user->persona->promotora->grupo_id);
-    } 
-    elseif ($user->role === UserRole::SUPERVISORA) {
-        // La supervisora ve clientes de todos los grupos en su plaza
-        $plazaId = $user->persona->supervisora->plaza_id;
-        $query->whereHas('grupo', function($q) use ($plazaId) {
-            $q->where('plaza_id', $plazaId);
-        });
-    }
-    // Nota: Admin y Ejecutivo no tienen filtros aquí para ver toda su jurisdicción.
-
-    // 3. Buscador Dinámico Acotado [10, 11]
-    if ($request->filled('search')) {
-        $search = $request->get('search');
-        
-        // Usamos una función anónima para agrupar los OR y no romper el filtro de seguridad anterior [12]
-        $query->where(function($mainQuery) use ($search) {
-            $mainQuery->whereHas('persona', function($q) use ($search) {
-                $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('apellido_paterno', 'like', "%{$search}%")
-                  ->orWhere('apellido_materno', 'like', "%{$search}%")
-                  ->orWhere('numero_documento', 'like', "%{$search}%");
+        // 2. Seguridad por Roles: Filtramos los datos según quién esté viendo [8, 9]
+        $usuario = auth()->user();
+        if ($usuario->role === UserRole::PROMOTORA) {
+            // La promotora solo puede ver a los clientes de su propio grupo
+            $query->where('promotora_id', $usuario->id);
+        } elseif ($usuario->role === UserRole::SUPERVISORA) {
+            // La supervisora solo ve clientes de los grupos de su plaza
+            $query->whereHas('grupo.plaza', function ($q) use ($usuario) {
+                $q->where('supervisora_id', $usuario->id);
             });
-        });
+        }
+
+        // 3. Búsqueda Dinámica y Filtros Avanzados [2, 10]
+        if ($request->has('search') && $request->search != '') {
+            $termino = $request->search;
+            // Usamos whereHas para buscar dentro de los datos de la relación 'persona' [2]
+            $query->whereHas('persona', function($q) use ($termino) {
+                $q->where('nombre', 'LIKE', "%{$termino}%")
+                  ->orWhere('curp', 'LIKE', "%{$termino}%");
+            });
+        }
+
+        // 4. Paginación: Para manejar miles de registros sin congelar la app [6, 11]
+        $clientes = $query->latest()->paginate(10);
+
+        // 5. Respuesta AJAX: Si la petición viene de la barra de búsqueda que configuramos antes [11]
+        if ($request->ajax()) {
+            return view('clientes.partials.table', compact('clientes'))->render();
+        }
+
+        return view('clientes.index', compact('clientes'));
     }
-
-    // 4. Paginación y Respuesta [13, 14]
-    $clientes = $query->paginate(9); 
-
-    if ($request->ajax()) {
-        // Renderizado parcial para búsquedas dinámicas con AJAX [15, 16]
-        return view('clientes.partials.table', compact('clientes'))->render();
-    }
-
-    return view('clientes.index', compact('clientes'));
-}
 
    
     public function store(StoreClienteRequest $request) 
-    {
-        // Transacción para asegurar la integridad financiera [10, 11]
-        DB::transaction(function () use ($request) {
-            $persona = Persona::create($request->only([
-                'nombre', 'apellido_paterno', 'apellido_materno', 
-                'numero_documento', 'telefono', 'direccion'
-            ]));
+{
+    // Mantenemos la transacción para asegurar la integridad financiera [8]
+    DB::transaction(function () use ($request) {
+        $persona = Persona::create($request->only([
+            'nombre', 'apellido_paterno', 'apellido_materno', 
+            'numero_documento', 'telefono', 'direccion'
+        ]));
 
-            $persona->cliente()->create([
-                'grupo_id' => $request->grupo_id, // Vínculo obligatorio con la jerarquía [12]
-                'fecha_registro' => $request->fecha_registro ?? now(),
-                'perfil_riesgo' => $request->perfil_riesgo,
-                'estado' => 'activo'
-            ]);
-        });
+        $persona->cliente()->create([
+            'grupo_id' => $request->grupo_id,
+            'fecha_registro' => $request->fecha_registro ?? now(),
+            'perfil_riesgo' => $request->perfil_riesgo,
+            'estado' => 'activo'
+        ]);
+    });
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente registrado exitosamente.');
-    }
+    return redirect()->route('clientes.index')
+        ->with('success', '¡Cliente registrado y vinculado a su grupo exitosamente!');
+}
 
 
    

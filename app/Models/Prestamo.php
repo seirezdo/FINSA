@@ -6,20 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Prestamo extends Model
 {
-   protected $fillable = [
-    'cliente_id',
-    'aval_id',
-    'grupo_id',
-    'monto_total_pagar',
-    'monto_prestado',
-    'tasa_interes',
-    'fecha_inicio',
-    'semanas',
-    'estado',
-    'es_extendido'
-];
+    protected $fillable = [
+        'cliente_id',
+        'aval_id',
+        'grupo_id',
+        'monto_total_pagar',
+        'monto_prestado',
+        'tasa_interes',
+        'fecha_inicio',
+        'semanas',
+        'estado',
+        'es_extendido'
+    ];
 
     // Relaciones
+    
     public function cliente() {
         return $this->belongsTo(Cliente::class, 'cliente_id');
     }
@@ -31,7 +32,16 @@ class Prestamo extends Model
     public function grupo() {
         return $this->belongsTo(Grupo::class);
     }
+
     public function calendarioPagos() {
-    return $this->hasMany(CalendarioPago::class);
-}
+        return $this->hasMany(CalendarioPago::class);
+    }
+
+    // ==========================================
+    // NUEVA RELACIÓN: Historial de Pagos directos
+    // ==========================================
+    public function pagos() {
+        return $this->hasManyThrough(Pago::class, CalendarioPago::class);
+    }
+      
 }

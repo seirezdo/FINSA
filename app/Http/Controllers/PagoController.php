@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use App\Http\Requests\StorePagoRequest;
+use App\Services\PagosServices; 
+use App\Models\Pago;
+use App\Services\PagoService; 
 class PagoController extends Controller
 {
 
@@ -59,11 +62,19 @@ public function registrarPago(Request $request)
         return view('prestamos.pagos.grupo', compact('grupo', 'clientes'));
     }
 
-    public function index()
+     public function index()
     {
-        //
-    }
+        // 1. Carga Ansiosa para evitar el N+1 y proteger el rendimiento [2]
+        $pagos = \App\Models\Pago::with([
+            'usuario.persona',                // Trae al empleado que hizo el cobro
+            'cuota.prestamo.cliente.persona'  // Trae al cliente que pagó
+        ])
+        ->latest('fecha_pago') // Ordenar del más reciente al más antiguo
+        ->paginate(15);        // Paginación para no saturar la vista
 
+         return view('prestamos.pagos.index', compact('pagos'));
+
+    }
     /**
      * Show the form for creating a new resource.
      */
@@ -75,48 +86,16 @@ public function registrarPago(Request $request)
     /**
      * Store a newly created resource in storage.
      */
-  public function store(Request $request)
-    {
-        $request->validate([
-            'calendario_pago_id' => 'required|exists:calendario_pagos,id',
-            'monto_pagado' => 'required|numeric|min:0',
-        ]);
+ public function store(StorePagoRequest $request, PagosServices $pagoService)
+{
+    // El controlador solo coordina: llama al servicio y devuelve la respuesta [8]
+    try {
+        $resultado = $pagoService->registrarPago($request->validated());
+        return back()->with('success', $resultado['mensaje']);
+    } catch (\Exception $e) {
+        return back()->withErrors('Error al procesar el pago: ' . $e->getMessage());
+    }
 
-        // Usamos una transacción para asegurar la integridad financiera [1, 7]
-        return DB::transaction(function () use ($request) {
-            $cuota = CalendarioPago::with('prestamo')->findOrFail($request->calendario_pago_id);
-            $prestamo = $cuota->prestamo;
-
-            // 1. Registrar el flujo de efectivo
-            Pago::create([
-                'calendario_pago_id' => $cuota->id,
-                'monto_pagado' => $request->monto_pagado,
-                'fecha_pago' => now(),
-                'registrado_por' => auth()->id(),
-            ]);
-
-            // 2. Aplicar Regla del 12.5%
-            if ($request->monto_pagado >= $cuota->monto_esperado) {
-                $cuota->update(['estado' => 'pagado']);
-                $mensaje = 'Pago completo registrado.';
-            } else {
-                // Lógica de Mora: Si el pago es parcial o nulo, se extiende el crédito [1]
-                $cuota->update(['estado' => 'parcial']);
-                
-                $nuevaSemanaNum = $prestamo->calendarioPagos()->max('numero_semana') + 1;
-                
-                $prestamo->calendarioPagos()->create([
-                    'numero_semana' => $nuevaSemanaNum,
-                    'fecha_vencimiento' => now()->addWeeks($nuevaSemanaNum),
-                    'monto_esperado' => $cuota->monto_esperado, // Cuota fija del 12.5%
-                    'estado' => 'pendiente',
-                ]);
-                
-                $mensaje = "Pago parcial. Se ha generado la semana {$nuevaSemanaNum} por mora.";
-            }
-
-            return back()->with('success', $mensaje);
-        });
     }
 
     /**

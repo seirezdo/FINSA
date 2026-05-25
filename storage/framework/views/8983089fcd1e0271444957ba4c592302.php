@@ -9,29 +9,42 @@
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
     <div class="py-12">
+        
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-gray-800">Gestión de Clientes</h2>
-                    <input type="text" id="search" placeholder="Buscar por nombre o documento..." 
-                           class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 w-1/3">
-           <a href="<?php echo e(route('clientes.create')); ?>" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition ease-in-out duration-150">
-    Nuevo Cliente
-</a>
-
+           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-t-4 border-indigo-500 pb-0"> 
+                
+                
+                <div class="p-6 bg-gray-50 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-gray-700 uppercase">
+                            Gestión de Clientes
+                        </h2>
+                        
+                        
+                        <div class="relative w-1/3">
+                            <input type="text" id="search" placeholder="Buscar por nombre o documento..." 
+                                   class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 pl-10 text-sm">
                         </div>
 
-                <div id="table-container">
+                        <a href="<?php echo e(route('clientes.create')); ?>" class="px-4 py-2 bg-indigo-600 text-white rounded-md text-xs font-bold uppercase">
+                            + Nuevo Cliente
+                        </a>
+                    </div>
+                </div>
+
+                
+                <div id="table-container" class="overflow-x-auto">
                     <?php echo $__env->make('clientes.partials.table', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                 </div>
             </div>
         </div>
     </div>
 
+   
     <script>
-        // Lógica de búsqueda en tiempo real
         document.getElementById('search').addEventListener('input', function(e) {
             let query = e.target.value;
+            // Mostramos un efecto visual de carga opcional aquí
             fetch(`/clientes?search=${query}`, {
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             })

@@ -19,6 +19,9 @@
                 <x-nav-link :href="route('plazas.index')" :active="request()->routeIs('plazas.*')">
     {{ __('Plazas') }}
 </x-nav-link>
+<x-nav-link :href="route('pagos.index')" :active="request()->routeIs('pagos.index')">
+    {{ __('Auditoría de Pagos') }}
+</x-nav-link>
             </div>
 
             <!-- Settings Dropdown -->

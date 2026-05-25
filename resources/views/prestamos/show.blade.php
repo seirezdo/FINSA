@@ -9,8 +9,12 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row gap-6">
                 
-                <!-- Panel de Resumen del Crédito -->
-                <div class="w-full md:w-1/3">
+                <!-- ============================================== -->
+                <!-- COLUMNA IZQUIERDA: Panel de Resumen y Modal    -->
+                <!-- ============================================== -->
+                <div class="w-full md:w-1/3" x-data="{ openModal: false }">
+                    
+                    <!-- Tarjeta de Estado de Cuenta -->
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-t-4 border-indigo-500 p-6">
                         <h3 class="text-lg font-bold mb-4 border-b pb-2 uppercase text-gray-600">Estado de Cuenta</h3>
                         
@@ -34,11 +38,88 @@
                                     {{ strtoupper($prestamo->estado) }}
                                 </span>
                             </div>
+
+                            <!-- BOTÓN PARA REGISTRAR ABONO -->
+                            @if($prestamo->estado !== 'liquidado')
+                            <div class="pt-4 mt-4 border-t border-gray-200">
+                                <button @click="openModal = true" class="w-full flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition transform hover:scale-105">
+                                    <i class="bi bi-currency-dollar mr-2"></i> Registrar Abono
+                                </button>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- VENTANA EMERGENTE (MODAL) DE ALPINE.JS -->
+                    <div x-show="openModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+                        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                            <!-- Fondo oscuro -->
+                            <div x-show="openModal" @click="openModal = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                            
+                            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                            
+                            <!-- Contenedor del Formulario -->
+                            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                                <form action="{{ route('pagos.store') }}" method="POST">
+                                    @csrf
+                                    <!-- ID oculto del préstamo -->
+                                    <input type="hidden" name="prestamo_id" value="{{ $prestamo->id }}">
+                                    
+                                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
+                                            Registrar Nuevo Abono
+                                        </h3>
+                                        
+                                        <div class="space-y-4">
+                                            
+                                          <!-- NUEVO CAMPO: Fecha de Recuperación -->
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700">Fecha del Abono / Recuperación</label>
+                                                {{-- Usamos type="date" para que muestre el calendario --}}
+                                                <input type="date" name="fecha_pago" required
+                                                    value="{{ date('Y-m-d') }}" 
+                                                    max="{{ date('Y-m-d') }}"
+                                                    class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                                <p class="text-[10px] text-gray-400 mt-1">Selecciona la fecha exacta en la que se recibió el dinero.</p>
+                                            </div>
+
+                                            <!-- Monto del Pago -->
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700">Monto a Cobrar ($)</label>
+                                                <input type="number" step="0.01" name="monto_pagado" required
+                                                    class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                                    placeholder="Ej. 500.00">
+                                            </div>
+
+                                            <!-- Método de Pago -->
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700">Método de Pago</label>
+                                                <select name="metodo_pago" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                                    <option value="efectivo">Efectivo</option>
+                                                    <option value="transferencia">Transferencia</option>
+                                                </select>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                        <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                            Guardar Pago
+                                        </button>
+                                        <button type="button" @click="openModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tabla de Comportamiento Semanal -->
+                <!-- ============================================== -->
+                <!-- COLUMNA DERECHA: Tabla de Comportamiento       -->
+                <!-- ============================================== -->
                 <div class="w-full md:w-2/3">
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg shadow-lg">
                         <div class="p-4 bg-gray-800 text-white flex justify-between items-center">
@@ -86,11 +167,10 @@
                                             <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm
                                                 {{ $cuota->estado === 'pagado' ? 'bg-green-100 text-green-800 border border-green-200' : 
                                                    ($cuota->estado === 'parcial' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 
-                                                   'bg-gray-100 text-gray-400') }}">
-                                                {{ strtoupper($cuota->estado) }}
+                                                   'bg-red-100 text-red-800 border border-red-200') }}">
+                                                {{ $cuota->estado === 'pagado' ? 'PAGADO' : ($cuota->estado === 'parcial' ? 'PARCIAL' : 'FALLA') }}
                                             </span>
                                         </td>
-
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -98,7 +178,7 @@
                         </div>
                     </div>
                 </div>
-
+                
             </div>
         </div>
     </div>

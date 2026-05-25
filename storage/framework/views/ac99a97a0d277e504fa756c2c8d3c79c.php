@@ -30,50 +30,48 @@
                                 <th class="px-6 py-3">Grupo</th>
                                 <th class="px-6 py-3">Monto Recuperado</th>
                                 <th class="px-6 py-3">Fecha de Cierre</th>
-                                <th class="px-6 py-3">Acciones</th>
+                                <th class="px-6 py-3">Semanas</th>
+                                 <th class="px-6 py-3">Finalizacion de credito</th>
                             </tr>
                         </thead>
-                       <tbody class="bg-white divide-y divide-gray-200">
+     <tbody class="bg-white divide-y divide-gray-200">
     <?php $__empty_1 = true; $__currentLoopData = $liquidados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $prestamo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-    <!-- Añadimos el evento onclick y la clase cursor-pointer -->
     <tr onclick="window.location='<?php echo e(route('prestamos.show', $prestamo->id)); ?>'" 
         class="hover:bg-blue-50 cursor-pointer transition group">
         
-        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
             <?php echo e($prestamo->cliente->persona->nombre); ?>
 
         </td>
-        
-        <td class="px-6 py-4 text-sm text-gray-500 text-center">
+
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
             <?php echo e($prestamo->grupo->nombre ?? 'N/A'); ?>
 
         </td>
-        
-        <td class="px-6 py-4 text-sm font-bold text-blue-600 text-center">
+
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 font-bold text-center line-through">
             $<?php echo e(number_format($prestamo->monto_total_pagar, 2)); ?>
 
         </td>
+
         
-        <td class="px-6 py-4 text-sm text-gray-500 text-center">
-            <?php echo e($prestamo->updated_at->format('d/m/Y')); ?>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold text-center">
+            $<?php echo e(number_format($prestamo->calendarioPagos->sum('monto_esperado'), 2)); ?>
 
         </td>
-        
-        <td class="px-6 py-4 text-center">
-            <span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 uppercase">
-                <?php echo e(strtoupper($prestamo->estado)); ?>
 
-            </span>
-            <!-- Pequeño indicador visual que aparece al pasar el mouse -->
-           
+        
+        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold text-gray-500 uppercase">
+            <?php echo e($prestamo->semanas); ?> / <?php echo e($prestamo->semanas); ?> Pagadas
         </td>
+
+         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold text-gray-500 uppercase">
+           FINALIZADO EL <?php echo e($prestamo->updated_at->format('d/m/Y')); ?> →
+        </td>
+       
     </tr>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-    <tr>
-        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
-            No hay registros para mostrar.
-        </td>
-    </tr>
+    <tr><td colspan="6" class="px-6 py-10 text-center text-gray-500 italic">No hay préstamos liquidados en el historial.</td></tr>
     <?php endif; ?>
 </tbody>
                     </table>

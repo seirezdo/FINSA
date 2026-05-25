@@ -34,35 +34,46 @@
                                 <th class="px-6 py-3">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                     <tbody class="bg-white divide-y divide-gray-200">
     <?php $__empty_1 = true; $__currentLoopData = $carteraVigente; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $prestamo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
     <tr onclick="window.location='<?php echo e(route('prestamos.show', $prestamo->id)); ?>'" 
         class="hover:bg-green-50 cursor-pointer transition group">
-        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+        
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
             <?php echo e($prestamo->cliente->persona->nombre); ?>
 
         </td>
-        <td class="px-6 py-4 text-center text-sm text-gray-500">
-            <?php echo e($prestamo->grupo->nombre ?? 'Sin Grupo'); ?>
+
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+            <?php echo e($prestamo->grupo->nombre ?? 'N/A'); ?>
 
         </td>
-        <td class="px-6 py-4 text-center">
+
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
+            $<?php echo e(number_format($prestamo->monto_total_pagar, 2)); ?>
+
+        </td>
+
+        
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold text-center">
+            $<?php echo e(number_format($prestamo->calendarioPagos->where('estado', 'pagado')->sum('monto_esperado'), 2)); ?>
+
+        </td>
+
+        
+        <td class="px-6 py-4 whitespace-nowrap text-center">
             <span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
                 Semana <?php echo e($prestamo->calendarioPagos->where('estado', 'pagado')->count()); ?> / <?php echo e($prestamo->semanas); ?>
 
             </span>
         </td>
-        <td class="px-6 py-4 text-center text-sm font-bold text-gray-900">
-            $<?php echo e(number_format($prestamo->calendarioPagos->where('estado', 'pagado')->sum('monto_esperado'), 2)); ?>
 
-        </td>
-        <td class="px-6 py-4 text-center text-sm text-blue-600 font-semibold">
-            
-            <span class="group-hover:underline">Ver Expediente →</span>
+        <td class="px-6 py-4 text-right text-xs font-bold text-green-500 opacity-0 group-hover:opacity-100 transition-opacity uppercase">
+            Ver Expediente →
         </td>
     </tr>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-    <tr><td colspan="5" class="px-6 py-10 text-center text-gray-500">No hay clientes al corriente.</td></tr>
+    <tr><td colspan="6" class="px-6 py-10 text-center text-gray-500 italic">No hay clientes al corriente actualmente.</td></tr>
     <?php endif; ?>
 </tbody>
                     </table>
