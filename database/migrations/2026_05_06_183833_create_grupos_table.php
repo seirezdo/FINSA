@@ -14,9 +14,9 @@ public function up(): void
    Schema::create('grupos', function (Blueprint $table) {
     $table->id();
     $table->foreignId('plaza_id')->constrained('plazas');
-    $table->foreignId('promotora_id')->nullable()->constrained('personas');
+$table->foreignId('promotora_id')->nullable()->constrained('users');
     $table->string('nombre', 100);
-    $table->integer('dia_cobro'); // Agregado para resolver el error del Seeder
+ $table->string('dia_reunion');
     $table->string('estado', 20)->default('FORMACION');
     $table->date('fecha_creacion')->useCurrent(); 
     $table->timestamps();

@@ -20,14 +20,17 @@ class StoreClienteRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    public function rules(): array {
+ public function rules(): array
+{
     return [
-        'nombre' => 'required|string|max:100',
-        'apellido_paterno' => 'required|string|max:100',
-        'apellido_materno' => 'nullable|string|max:100',
-        'numero_documento' => 'required|string|unique:personas,numero_documento', // Evita duplicados financieros [3]
-        'fecha_registro' => 'required|date',
-        'perfil_riesgo' => 'required|string'
+        'grupo_id'         => 'required|exists:grupos,id',
+        'nombre'           => 'required|string|max:255',
+        // Asegúrate de que el nombre del campo coincida con el "name" de tu input HTML
+        'numero_documento' => 'required|string|max:18', 
+        'telefono'         => 'nullable|string|max:20',
+        'direccion'        => 'nullable|string',
+        'perfil_riesgo'    => 'nullable|string',
+        'fecha_registro'   => 'nullable|date',
     ];
 }
 }

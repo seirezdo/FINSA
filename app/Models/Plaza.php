@@ -34,4 +34,8 @@ class Plaza extends Model
     {
         return $this->belongsTo(Persona::class, 'supervisora_id');
     }
+      public function grupos()
+    {
+        return $this->hasMany(Grupo::class);
+    }
 }

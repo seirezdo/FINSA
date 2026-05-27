@@ -12,10 +12,11 @@ return new class extends Migration
 public function up(): void
 {
     Schema::create('prestamos', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('cliente_id')->constrained('clientes', 'persona_id');
-        $table->foreignId('aval_id')->constrained('personas');
-        $table->foreignId('grupo_id')->constrained('grupos');
+      $table->id();
+$table->foreignId('cliente_id')->constrained('clientes')->onDelete('cascade');
+// Cambiamos 'personas' por 'clientes' y lo hacemos opcional (nullable) por si algún préstamo se da sin aval
+$table->foreignId('aval_id')->nullable()->constrained('clientes');
+$table->foreignId('grupo_id')->constrained('grupos');
             
         // Ajustamos los nombres para que coincidan con el controlador
         $table->decimal('monto_total_pagar', 19, 4); // Antes: monto_total

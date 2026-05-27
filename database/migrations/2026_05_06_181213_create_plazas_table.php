@@ -17,8 +17,8 @@ return new class extends Migration
           $table->string('zona', 100)->nullable();
             
             // Relaciones con la tabla personas para ejecutivo y supervisora
-            $table->foreignId('ejecutivo_id')->nullable()->constrained('personas');
-            $table->foreignId('supervisora_id')->nullable()->constrained('personas');
+          $table->foreignId('ejecutivo_id')->constrained('users')->onDelete('cascade');
+         $table->foreignId('supervisora_id')->constrained('users')->onDelete('cascade');
             
             $table->string('estado', 20)->default('activo');
             $table->timestamps();

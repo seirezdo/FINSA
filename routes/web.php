@@ -7,6 +7,7 @@ use App\Http\Controllers\PlazaController;
 use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\DashboardController; 
+use App\Http\Controllers\GrupoController; // <-- 1. AGREGADO: Importamos el controlador de Grupos
 
 Route::get('/', function () {
     return view('welcome');
@@ -32,6 +33,7 @@ Route::middleware(['auth', 'role:admin,ejecutivo,supervisora'])->group(function 
     // Excluimos 'destroy' para proteger la eliminación
     Route::resource('prestamos', PrestamoController::class)->except(['destroy']);
     Route::resource('plazas', PlazaController::class)->except(['destroy']);
+    Route::resource('grupos', GrupoController::class)->except(['destroy']); // <-- 2. AGREGADO: Rutas generales de Grupos
     
     // Reportes de Cartera Financiera
     Route::get('/reportes/liquidados', [PrestamoController::class, 'reporteLiquidados'])->name('reportes.liquidados');
@@ -50,6 +52,7 @@ Route::middleware(['auth', 'role:admin,ejecutivo,supervisora'])->group(function 
 Route::middleware(['auth', 'role:admin,ejecutivo,supervisora,promotora'])->group(function () {
     // Ruta central que procesa el PagoService (Método POST exclusivo para inyectar dinero)
     Route::post('/pagos', [PagoController::class, 'store'])->name('pagos.store');
+    Route::post('/prestamos/{prestamo}/extender-mora', [PrestamoController::class, 'extenderMora'])->name('prestamos.extender-mora');
 });
 
 // ==========================================
@@ -70,6 +73,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::delete('/prestamos/{prestamo}', [PrestamoController::class, 'destroy'])->name('prestamos.destroy');
     Route::delete('/clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
     Route::delete('/plazas/{plaza}', [PlazaController::class, 'destroy'])->name('plazas.destroy');
+    Route::delete('/grupos/{grupo}', [GrupoController::class, 'destroy'])->name('grupos.destroy'); // <-- 3. AGREGADO: Eliminación protegida de Grupos
 });
 
 // Carga las rutas de autenticación generadas por Laravel Breeze

@@ -23,7 +23,7 @@ use HasFactory, Notifiable;
     return [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-        'role' => UserRole::class, // Convierte el string 'cliente' a Enum automáticamente
+        'role' => UserRole::class, 
     ];
 }
 

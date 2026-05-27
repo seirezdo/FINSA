@@ -9,22 +9,23 @@ use App\Enums\UserRole; // Asegúrate de importar tu Enum de Roles
 
 class Cliente extends Model
 {
-    protected $primaryKey = 'persona_id';
-    public $incrementing = false;
+    // 1. ELIMINADO: protected $primaryKey = 'persona_id'; y $incrementing = false;
+    // Ahora Laravel usará el 'id' estándar autoincremental por defecto.
 
     protected $fillable = [
-        'persona_id',
-        'grupo_id',
-        'curp',
+        'grupo_id', 
+        'nombre', 
+        'curp', 
+        'telefono', 
+        'direccion', 
+        'fecha_registro', 
+        'perfil_riesgo', 
         'estado'
     ];
 
     // --- RELACIONES ---
 
-    public function persona(): BelongsTo
-    {
-        return $this->belongsTo(Persona::class, 'persona_id');
-    }
+    // 2. ELIMINADO: public function persona() {...} ya no existe.
 
     public function grupo(): BelongsTo
     {
@@ -33,8 +34,8 @@ class Cliente extends Model
 
     public function prestamos(): HasMany
     {
-        // Especificamos 'cliente_id' como llave foránea en la tabla prestamos [6, 7]
-        return $this->hasMany(Prestamo::class, 'cliente_id'); 
+        // Al llamarse el modelo Cliente, Laravel deduce automáticamente 'cliente_id'
+        return $this->hasMany(Prestamo::class); 
     }
 
     // --- SCOPES (Lo que falta para corregir el error) ---
@@ -42,22 +43,26 @@ class Cliente extends Model
     /**
      * Filtra los clientes según la jerarquía del usuario autenticado [8, 9]
      */
-    public function scopeForUser($query, $user)
+      public function scopeForUser($query, $user)
     {
-        if ($user->role === UserRole::PROMOTORA) {
-            // La promotora solo ve clientes de su grupo [10]
-            return $query->where('grupo_id', $user->persona->promotora->grupo_id);
+        // Ajustamos la lógica porque la jerarquía (promotora/supervisora) ahora apunta directo al ID del usuario
+        if ($user->role === UserRole::PROMOTORA->value) { 
+            // La promotora solo ve clientes de su grupo
+            return $query->whereHas('grupo', function($q) use ($user) {
+                $q->where('promotora_id', $user->id);
+            });
         } 
         
-        if ($user->role === UserRole::SUPERVISORA) {
-            // La supervisora ve todos los grupos de su plaza [10]
-            return $query->whereHas('grupo', function($q) use ($user) {
-                $q->where('plaza_id', $user->persona->supervisora->plaza_id);
+        if ($user->role === UserRole::SUPERVISORA->value) {
+            // La supervisora ve todos los grupos de su plaza
+            return $query->whereHas('grupo.plaza', function($q) use ($user) {
+                $q->where('supervisora_id', $user->id);
             });
         }
 
         return $query; // Admin y Ejecutivo ven todo
     }
+
 
     /**
      * Lógica de búsqueda avanzada por nombre o documento [5]
@@ -66,13 +71,11 @@ class Cliente extends Model
     {
         if (!$term) return $query;
 
+        // 3. CORREGIDO: Buscamos directamente en la tabla clientes.
+        // Ya no necesitamos 'whereHas' hacia personas, ni buscar apellidos separados.
         return $query->where(function($mainQuery) use ($term) {
-            $mainQuery->whereHas('persona', function($q) use ($term) {
-                $q->where('nombre', 'like', "%{$term}%")
-                  ->orWhere('apellido_paterno', 'like', "%{$term}%")
-                  ->orWhere('apellido_materno', 'like', "%{$term}%")
-                  ->orWhere('numero_documento', 'like', "%{$term}%");
-            });
+            $mainQuery->where('nombre', 'like', "%{$term}%")
+                      ->orWhere('curp', 'like', "%{$term}%");
         });
     }
 }

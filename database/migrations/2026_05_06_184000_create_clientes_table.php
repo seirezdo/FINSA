@@ -13,17 +13,20 @@ public function up(): void
 {
     Schema::create('clientes', function (Blueprint $table) {
         $table->id();
-        // Relación con la identidad física
-        $table->foreignId('persona_id')->constrained('personas')->onDelete('cascade');
-        
-        // ESTA ES LA COLUMNA QUE TE FALTA: Relación con la jerarquía operativa [3, 4]
         $table->foreignId('grupo_id')->constrained('grupos')->onDelete('cascade');
         
-        $table->string('curp', 18)->unique(); // Crítico para evitar duplicados [3]
+        // ¡Estos campos antes estaban en 'personas', ahora deben estar aquí!
+        $table->string('nombre');
+        $table->string('curp', 18)->unique();
+        $table->string('telefono', 20)->nullable();
+        $table->text('direccion')->nullable();
+        
+        $table->date('fecha_registro')->nullable();
+        $table->string('perfil_riesgo')->default('medio');
         $table->string('estado')->default('activo');
+        
         $table->timestamps();
     });
-
 }
 
     /**

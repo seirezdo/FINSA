@@ -6,7 +6,7 @@ use App\Models\Prestamo;
 use App\Models\Cliente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use Carbon\Carbon; 
 class PrestamoController extends Controller
 {
 
@@ -119,19 +119,64 @@ public function reporteCarteraVigente()
 
     return view('reportes.cartera_vencida', compact('carteraVencida'));
 }
-public function show(Prestamo $prestamo)
+public function show(\App\Models\Prestamo $prestamo)
 {
-    // Usamos load() porque el modelo ya está instanciado por Route Model Binding [1].
-    // Cargamos exactamente los datos que necesita la vista para evitar el problema N+1.
-    $prestamo->load([
-        'cliente.persona',       // Datos del cliente en el encabezado
-        'grupo',                 // (Opcional, si lo usas en la vista)
-        'pagos.cuota',           // Para mostrar el número de semana de cada pago
-        'pagos.usuario.persona'  // Para la auditoría: ver quién registró cada pago
-    ]);
+    // =================================================================
+    // MOTOR DE EVALUACIÓN AUTOMÁTICA DE MORA (CARTERA VENCIDA)
+    // =================================================================
+    
+    // 1. Buscamos cuotas vigentes cuya fecha límite YA PASÓ
+    $cuotasVencidas = $prestamo->calendarioPagos()
+        ->whereIn('estado', ['pendiente', 'parcial'])
+        ->where('fecha_vencimiento', '<', Carbon::now()->format('Y-m-d'))
+        ->get();
 
+    // 2. Marcamos todas las vencidas como FALLA (Solo actualizar, SIN crear semanas aquí)
+    foreach ($cuotasVencidas as $cuota) {
+        $cuota->update(['estado' => 'falla']);
+    }
+
+    // 3. Verificamos si el préstamo tiene al menos una falla en todo su historial
+    $tieneFallas = $prestamo->calendarioPagos()->where('estado', 'falla')->exists();
+
+    // 4. CANDADO ESTRICTO: Verificamos si la semana 13 ya fue creada
+    $existeSemana13 = $prestamo->calendarioPagos()->where('numero_semana', 13)->exists();
+
+    // 5. Si hay fallas y la semana 13 NO existe, la creamos (UNA SOLA VEZ)
+    if ($tieneFallas && !$existeSemana13) {
+        // Tomamos la fecha de la última semana normal para sumarle 7 días
+        $ultimaCuota = $prestamo->calendarioPagos()->orderBy('numero_semana', 'desc')->first();
+
+        $prestamo->calendarioPagos()->create([
+            'numero_semana'     => 13,
+            'monto_esperado'    => 0, 
+            'estado'            => 'pendiente',
+            'fecha_vencimiento' => Carbon::parse($ultimaCuota->fecha_vencimiento)->addDays(7)
+        ]);
+    }
+
+    // =================================================================
+    // Retornamos la vista normal con el expediente actualizado
+    // =================================================================
     return view('prestamos.show', compact('prestamo'));
 }
+  public function extenderMora(\App\Models\Prestamo $prestamo)
+    {
+        // 1. Buscamos el número de la última semana generada
+        $ultimaCuota = $prestamo->calendarioPagos()->orderBy('numero_semana', 'desc')->first();
+        $nuevaSemana = $ultimaCuota ? $ultimaCuota->numero_semana + 1 : 1;
+
+        // 2. Creamos la semana extra. 
+        // OJO: El monto_esperado va en 0 para no duplicar la deuda total del cliente, 
+        // ya que el dinero que debe pertenece a las semanas anteriores que dicen "FALLA".
+        $prestamo->calendarioPagos()->create([
+            'numero_semana'  => $nuevaSemana,
+            'monto_esperado' => 0, 
+            'estado'         => 'pendiente'
+        ]);
+
+        return back()->with('success', "Se ha generado la Semana {$nuevaSemana} por extensión de mora en la hoja de pagos.");
+    }
     /**
      * Show the form for editing the specified resource.
      */

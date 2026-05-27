@@ -11,27 +11,19 @@ use Illuminate\Support\Facades\DB;
 use App\Enums\UserRole;
 class ClienteController extends Controller
 {
- public function create() 
+  public function index(Request $request)
     {
-        // SOLUCIÓN AL ERROR: Aquí es donde debes obtener los grupos [4]
-        $grupos = Grupo::all();
-        return view('clientes.create', compact('grupos'));
-    }
+        // 1. Optimización (Evitar N+1): Cargamos grupo, plaza y promotora [8, 9]
+        // NECESARIO: Ya no cargamos 'persona' porque los datos viven en 'clientes'
+        $query = Cliente::with(['grupo.plaza', 'grupo.promotora']);
 
-    /**
-     * Muestra el listado de clientes con búsqueda y paginación.
-     */
-  
-   public function index(Request $request)
-    {
-        // 1. Optimización (Evitar N+1): Cargamos las relaciones por adelantado [5-7]
-        $query = Cliente::with(['persona', 'grupo.plaza']);
-
-        // 2. Seguridad por Roles: Filtramos los datos según quién esté viendo [8, 9]
+        // 2. Seguridad por Roles: Filtramos los datos según quién esté viendo [7, 10]
         $usuario = auth()->user();
         if ($usuario->role === UserRole::PROMOTORA) {
-            // La promotora solo puede ver a los clientes de su propio grupo
-            $query->where('promotora_id', $usuario->id);
+            // NECESARIO: La promotora_id vive en el grupo, no en el cliente.
+            $query->whereHas('grupo', function ($q) use ($usuario) {
+                $q->where('promotora_id', $usuario->id);
+            });
         } elseif ($usuario->role === UserRole::SUPERVISORA) {
             // La supervisora solo ve clientes de los grupos de su plaza
             $query->whereHas('grupo.plaza', function ($q) use ($usuario) {
@@ -39,20 +31,20 @@ class ClienteController extends Controller
             });
         }
 
-        // 3. Búsqueda Dinámica y Filtros Avanzados [2, 10]
+        // 3. Búsqueda Dinámica y Filtros Avanzados
         if ($request->has('search') && $request->search != '') {
             $termino = $request->search;
-            // Usamos whereHas para buscar dentro de los datos de la relación 'persona' [2]
-            $query->whereHas('persona', function($q) use ($termino) {
+            // NECESARIO: Buscamos directamente en la tabla clientes (ya no en la relación persona)
+            $query->where(function($q) use ($termino) {
                 $q->where('nombre', 'LIKE', "%{$termino}%")
                   ->orWhere('curp', 'LIKE', "%{$termino}%");
             });
         }
 
-        // 4. Paginación: Para manejar miles de registros sin congelar la app [6, 11]
+        // 4. Paginación: Para manejar miles de registros sin congelar la app [8]
         $clientes = $query->latest()->paginate(10);
 
-        // 5. Respuesta AJAX: Si la petición viene de la barra de búsqueda que configuramos antes [11]
+        // 5. Respuesta AJAX: Conservado, ¡excelente implementación de UX!
         if ($request->ajax()) {
             return view('clientes.partials.table', compact('clientes'))->render();
         }
@@ -60,27 +52,43 @@ class ClienteController extends Controller
         return view('clientes.index', compact('clientes'));
     }
 
-   
+    public function create() 
+    {
+        // MEJORA OPCIONAL PERO RECOMENDADA: 
+        // Si entra una promotora, solo debería ver en el select sus propios grupos, 
+        // no los de toda la microfinanciera.
+        $usuario = auth()->user();
+        
+        if ($usuario->role === UserRole::PROMOTORA) {
+            $grupos = Grupo::where('promotora_id', $usuario->id)->get();
+        } else {
+            $grupos = Grupo::all(); // Admin o Ejecutivos ven todos
+        }
+
+        return view('clientes.create', compact('grupos'));
+    }    
+
     public function store(StoreClienteRequest $request) 
-{
-    // Mantenemos la transacción para asegurar la integridad financiera [8]
-    DB::transaction(function () use ($request) {
-        $persona = Persona::create($request->only([
-            'nombre', 'apellido_paterno', 'apellido_materno', 
-            'numero_documento', 'telefono', 'direccion'
-        ]));
-
-        $persona->cliente()->create([
-            'grupo_id' => $request->grupo_id,
+    {
+        // NECESARIO: Como unificamos los modelos, el "mass assignment" permite 
+        // guardar todo directamente en la tabla clientes sin usar DB::transaction [11].
+        // (Asegúrate de que 'perfil_riesgo' y 'estado' existan en tu propiedad $fillable del modelo y la migración)
+        
+        Cliente::create([
+            'grupo_id'       => $request->grupo_id,
+            'nombre'         => $request->nombre,
+            // Asumiendo que tu Request trae la curp o lo mapeas desde numero_documento
+            'curp'           => $request->numero_documento, 
+            'telefono'       => $request->telefono,
+            'direccion'      => $request->direccion,
             'fecha_registro' => $request->fecha_registro ?? now(),
-            'perfil_riesgo' => $request->perfil_riesgo,
-            'estado' => 'activo'
+            'perfil_riesgo'  => $request->perfil_riesgo ?? 'medio',
+            'estado'         => 'activo'
         ]);
-    });
 
-    return redirect()->route('clientes.index')
-        ->with('success', '¡Cliente registrado y vinculado a su grupo exitosamente!');
-}
+        return redirect()->route('clientes.index')
+            ->with('success', '¡Cliente registrado y vinculado a su grupo exitosamente!');
+    }
 
 
    

@@ -6,16 +6,16 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-   public function up(): void
+  public function up(): void
 {
     Schema::create('users', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('persona_id')->constrained('personas')->onDelete('cascade');
+        // ¡Se eliminó la restricción de persona_id!
         $table->string('name');
         $table->string('email')->unique();
         $table->timestamp('email_verified_at')->nullable();
         $table->string('password');
-        $table->string('role')->default('cliente'); // Rol base decidido [5]
+        $table->string('role')->default('cliente'); // Rol base decidido
         $table->string('estado', 20)->default('activo');
         $table->rememberToken();
         $table->timestamps();

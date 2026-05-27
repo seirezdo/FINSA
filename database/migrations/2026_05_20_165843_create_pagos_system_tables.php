@@ -20,7 +20,7 @@ return new class extends Migration
         $table->integer('numero_semana'); // 1, 2, 3...
         $table->date('fecha_vencimiento');
         $table->decimal('monto_esperado', 10, 2); // El 12.5% del préstamo
-        $table->enum('estado', ['pendiente', 'parcial', 'pagado', 'vencido'])->default('pendiente');
+        $table->enum('estado', ['pendiente', 'parcial', 'pagado', 'vencido', 'falla'])->default('pendiente');
         $table->timestamps();
     });
 
