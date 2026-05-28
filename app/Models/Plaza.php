@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
 
 class Plaza extends Model
 {
@@ -20,19 +21,19 @@ class Plaza extends Model
     ];
 
     /**
-     * Relación con el Ejecutivo (Persona).
+     * Relación con el Ejecutivo (Usuario).
      */
     public function ejecutivo(): BelongsTo
     {
-        return $this->belongsTo(Persona::class, 'ejecutivo_id');
+        return $this->belongsTo(User::class, 'ejecutivo_id');
     }
 
     /**
-     * Relación con la Supervisora (Persona).
+     * Relación con la Supervisora (Usuario).
      */
     public function supervisora(): BelongsTo
     {
-        return $this->belongsTo(Persona::class, 'supervisora_id');
+        return $this->belongsTo(User::class, 'supervisora_id');
     }
       public function grupos()
     {

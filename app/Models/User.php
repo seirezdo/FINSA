@@ -8,11 +8,10 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use App\Enums\UserRole;
-#[Fillable(['name', 'email', 'password', 'persona_id', 'estado', 'role'])] // Permite guardar estos campos [5]
+#[Fillable(['name', 'email', 'password', 'estado', 'role'])] // Permite guardar estos campos [5]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-   
 use HasFactory, Notifiable;
 
     /**
@@ -27,13 +26,4 @@ use HasFactory, Notifiable;
     ];
 }
 
-    /**
-     * Relación Eloquent: Un Usuario pertenece a una Persona.
-     * Esto permite acceder a los datos físicos mediante $user->persona->nombre [7, 8].
-     */
-    public function persona()
-    {
-        return $this->belongsTo(Persona::class);
-    }
-    
 }

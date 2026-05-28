@@ -40,7 +40,7 @@
                                     
                                     {{-- Navegamos por las relaciones para llegar al nombre del cliente --}}
                                     <td class="px-6 py-4 text-gray-700">
-                                        {{ $pago->cuota->prestamo->cliente->persona->nombre ?? 'N/A' }}
+                                        {{ $pago->cuota->prestamo->cliente->nombre ?? 'N/A' }}
                                         <br>
                                         <span class="text-xs text-gray-400">Préstamo #{{ $pago->cuota->prestamo_id ?? '' }}</span>
                                     </td>
@@ -55,7 +55,7 @@
                                     
                                     {{-- Trazabilidad Financiera: Quién recibió el dinero --}}
                                     <td class="px-6 py-4 whitespace-nowrap text-indigo-800 font-medium bg-indigo-50/30 border-l border-indigo-50">
-                                        {{ $pago->usuario->persona->nombre ?? 'Sistema Automático' }}
+                                        {{ $pago->usuario->name ?? 'Sistema Automático' }}
                                     </td>
                                 </tr>
                             @empty

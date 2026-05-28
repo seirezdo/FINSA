@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use App\Models\Persona;
-use Illuminate\Support\Facades\DB;
 
 class RegisteredUserController extends Controller
 {
@@ -40,23 +38,12 @@ public function store(Request $request): RedirectResponse
         'password' => ['required', 'confirmed', Rules\Password::defaults()],
     ]);
 
-    $user = DB::transaction(function () use ($request) {
-        // Creamos la Persona con los datos mínimos
-        $persona = Persona::create([
-            'nombre' => $request->nombre,
-            'apellido_paterno' => $request->apellido_paterno,
-            'apellido_materno' => $request->apellido_materno, // Puede ser null
-        ]);
-
-        // Creamos el Usuario vinculado
-        return User::create([
-            'name' => $request->nombre . ' ' . $request->apellido_paterno . ' ' . $request->apellido_materno,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'persona_id' => $persona->id,
-            'estado' => 'activo',
-        ]);
-    });
+    $user = User::create([
+        'name' => trim($request->nombre . ' ' . $request->apellido_paterno . ' ' . $request->apellido_materno),
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'estado' => 'activo',
+    ]);
 
     event(new Registered($user));
     Auth::login($user);

@@ -15,11 +15,13 @@
                         class="hover:bg-gray-50 cursor-pointer transition">
                     <td class="px-6 py-4">
                         <div class="text-sm font-medium text-gray-900">
-                            {{ $cliente->persona->nombre }} {{ $cliente->persona->apellido_paterno }} {{ $cliente->persona->apellido_materno }}
+                            {{-- 1. CORREGIDO: Llamamos directo al nombre unificado del cliente --}}
+                            {{ $cliente->nombre }}
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ $cliente->persona->numero_documento }}
+                        {{-- 2. CORREGIDO: Ahora el documento se llama 'curp' y vive en clientes --}}
+                        {{ $cliente->curp }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
                         {{ $cliente->grupo->nombre ?? 'Sin asignar' }}
@@ -33,7 +35,8 @@
                         <a href="{{ route('clientes.edit', $cliente) }}" class="text-indigo-600 hover:text-indigo-900 mr-3 font-bold">Editar</a>
                         
                         {{-- Lógica de Seguridad: Solo el Admin ve el botón de eliminar --}}
-                        @if(auth()->user()->role === \App\Enums\UserRole::ADMIN)
+                        {{-- 3. MEJORA: Agregué '->value' por si tu Enum exige el valor exacto como en el Controlador --}}
+                        @if(auth()->user()->role === \App\Enums\UserRole::ADMIN->value)
                             <form action="{{ route('clientes.destroy', $cliente->id) }}" method="POST" class="inline">
                                 @csrf
                                 @method('DELETE')

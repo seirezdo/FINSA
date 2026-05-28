@@ -2,7 +2,7 @@
     <form method="POST" action="{{ route('register') }}">
         @csrf
 
-        <!-- Información Personal (Tabla Personas) -->
+        <!-- Información Personal -->
 
     <div class="mt-4">
         <x-input-label for="nombre" :value="__('Nombre(s)')" />

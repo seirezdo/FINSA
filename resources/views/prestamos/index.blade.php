@@ -19,7 +19,7 @@
                     <tbody>
                         @foreach($prestamos as $prestamo)
                         <tr>
-                            <td class="border p-2">{{ $prestamo->cliente->persona->nombre }}</td>
+                            <td class="border p-2">{{ $prestamo->cliente->nombre }}</td>
                             <td class="border p-2">${{ number_format($prestamo->monto_prestado, 2) }}</td>
                             <td class="border p-2">{{ ucfirst($prestamo->estado) }}</td>
                             <td class="border p-2">

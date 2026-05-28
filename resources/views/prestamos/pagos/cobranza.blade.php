@@ -10,7 +10,7 @@
         @foreach($clientes as $cliente)
             @php $prestamo = $cliente->prestamos->first(); @endphp
             <tr class="border-t">
-                <td class="px-6 py-4">{{ $cliente->persona->nombre }}</td>
+                <td class="px-6 py-4">{{ $cliente->nombre }}</td>
                 <td class="px-6 py-4 text-green-600 font-bold">
                     ${{ number_format($prestamo->calendarioPagos->where('estado', 'pendiente')->first()->monto_esperado, 2) }}
                 </td>

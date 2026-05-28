@@ -9,7 +9,7 @@
                         Préstamo #{{ str_pad($prestamo->id, 5, '0', STR_PAD_LEFT) }}
                     </h2>
                     <p class="text-sm text-gray-500 mt-1">
-                        Cliente: <span class="font-semibold">{{ $prestamo->cliente->persona->nombre ?? 'N/A' }}</span>
+                        Cliente: <span class="font-semibold">{{ $prestamo->cliente->nombre ?? 'N/A' }}</span>
                     </p>
                 </div>
                 <div class="text-right">
@@ -68,7 +68,7 @@
                                         {{ $pago->metodo_pago }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-indigo-700 font-medium bg-indigo-50/30">
-                                        {{ $pago->usuario->persona->nombre ?? 'Sistema' }}
+                                        {{ $pago->usuario->name ?? 'Sistema' }}
                                     </td>
                                 </tr>
                             @empty

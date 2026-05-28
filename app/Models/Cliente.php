@@ -9,8 +9,7 @@ use App\Enums\UserRole; // Asegúrate de importar tu Enum de Roles
 
 class Cliente extends Model
 {
-    // 1. ELIMINADO: protected $primaryKey = 'persona_id'; y $incrementing = false;
-    // Ahora Laravel usará el 'id' estándar autoincremental por defecto.
+    // Usamos el id estándar autoincremental por defecto.
 
     protected $fillable = [
         'grupo_id', 
@@ -25,7 +24,7 @@ class Cliente extends Model
 
     // --- RELACIONES ---
 
-    // 2. ELIMINADO: public function persona() {...} ya no existe.
+    // 2. No existe la relación Persona. Los datos del cliente están en esta tabla.
 
     public function grupo(): BelongsTo
     {
@@ -72,7 +71,6 @@ class Cliente extends Model
         if (!$term) return $query;
 
         // 3. CORREGIDO: Buscamos directamente en la tabla clientes.
-        // Ya no necesitamos 'whereHas' hacia personas, ni buscar apellidos separados.
         return $query->where(function($mainQuery) use ($term) {
             $mainQuery->where('nombre', 'like', "%{$term}%")
                       ->orWhere('curp', 'like', "%{$term}%");

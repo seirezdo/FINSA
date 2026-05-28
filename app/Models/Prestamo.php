@@ -26,7 +26,7 @@ class Prestamo extends Model
     }
 
     public function aval() {
-        return $this->belongsTo(Persona::class, 'aval_id');
+        return $this->belongsTo(Cliente::class, 'aval_id');
     }
 
     public function grupo() {
@@ -40,8 +40,15 @@ class Prestamo extends Model
     // ==========================================
     // NUEVA RELACIÓN: Historial de Pagos directos
     // ==========================================
-    public function pagos() {
-        return $this->hasManyThrough(Pago::class, CalendarioPago::class);
+   public function pagos() {
+        return $this->hasManyThrough(
+            Pago::class, 
+            CalendarioPago::class,
+            'prestamo_id', // Llave foránea en la tabla intermedia (calendario_pagos)
+            'calendario_pago_id', // Llave foránea en la tabla final (pagos)
+            'id', // Llave local en prestamos
+            'id'  // Llave local en calendario_pagos
+        );
     }
       
 }

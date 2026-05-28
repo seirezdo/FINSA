@@ -12,7 +12,7 @@
             @foreach($clientes as $cliente)
                 @php $cuotaActual = $cliente->prestamoActivo->calendarioPagos->where('estado', 'pendiente')->first(); @endphp
                 <tr class="bg-white border-b hover:bg-gray-50">
-                    <td class="px-6 py-4 font-medium text-gray-900">{{ $cliente->persona->nombre }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900">{{ $cliente->nombre }}</td>
                     <td class="px-6 py-4 text-blue-600 font-bold">${{ number_format($cuotaActual->monto_esperado, 2) }}</td>
                     <td class="px-6 py-4">
                         <form id="pago-form-{{ $cliente->id }}" action="{{ route('pagos.store') }}" method="POST">

@@ -30,11 +30,7 @@
         class="hover:bg-green-50 cursor-pointer transition group">
         
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-            {{ $prestamo->cliente->persona->nombre }}
-        </td>
-
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-            {{ $prestamo->grupo->nombre ?? 'N/A' }}
+            {{ $prestamo->cliente->nombre }}
         </td>
 
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">

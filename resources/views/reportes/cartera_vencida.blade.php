@@ -27,39 +27,40 @@
                       <tbody class="bg-white divide-y divide-gray-200">
     @forelse($carteraVencida as $prestamo)
     {{-- Toda la fila es clickeable y redirige al expediente [3] --}}
-    <tr onclick="window.location='{{ route('prestamos.show', $prestamo->id) }}'" 
+     <tr onclick="window.location='{{ route('prestamos.show', $prestamo->id) }}'" 
         class="hover:bg-red-50 cursor-pointer transition group">
         
+        {{-- 1. Cliente --}}
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-            {{ $prestamo->cliente->persona->nombre }}
+            {{ $prestamo->cliente->nombre }}
         </td>
 
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-            {{ $prestamo->grupo->nombre ?? 'N/A' }}
+        {{-- 2. CORREGIDO: Faltaba la celda del Grupo para que no se desfasaran las columnas --}}
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+            {{ $prestamo->grupo->nombre ?? 'Sin asignar' }}
         </td>
 
+        {{-- 3. Monto Total --}}
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
             ${{ number_format($prestamo->monto_total_pagar, 2) }}
         </td>
 
-        {{-- Restaurado: Monto recuperado hasta el momento [4] --}}
+        {{-- 4. Pagado (Optimizado sin N+1) --}}
         <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold text-center">
-            ${{ number_format($prestamo->calendarioPagos->where('estado', 'pagado')->sum('monto_esperado'), 2) }}
+            ${{ number_format($prestamo->monto_recuperado ?? 0, 2) }}
         </td>
 
-        {{-- Restaurado: Progreso de semanas (ej. 4/12) [5] --}}
+        {{-- 5. Semanas Pagadas (Ahora sí caerá en su columna correcta) --}}
         <td class="px-6 py-4 whitespace-nowrap text-center">
             <span class="px-2 py-1 text-xs font-bold rounded bg-red-100 text-red-800">
-                {{ $prestamo->calendarioPagos->where('estado', 'pagado')->count() }} / {{ $prestamo->semanas }}
+                {{ $prestamo->semanas_pagadas }} / {{ $prestamo->semanas }}
             </span>
+
             {{-- Aviso de mora visual --}}
-            @if($prestamo->calendarioPagos->where('numero_semana', '>', 12)->count() > 0)
+            @if($prestamo->en_prorroga)
                 <span class="block text-[9px] text-red-600 font-black uppercase mt-1">En Prórroga</span>
             @endif
         </td>
-
-        {{-- Indicador de acción sin botón estorboso --}}
-      
     </tr>
     @empty
     <tr>
