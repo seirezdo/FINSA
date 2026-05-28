@@ -4,7 +4,10 @@
             {{ __('Reporte de Cartera Vencida') }}
         </h2>
     </x-slot>
-
+  {{-- BOTÓN DE VOLVER: Como no hay menú de reportes, regresamos al inicio --}}
+    <x-slot name="backUrl">
+        {{ route('dashboard') }}
+    </x-slot>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -40,9 +43,8 @@
             {{ $prestamo->grupo->nombre ?? 'Sin asignar' }}
         </td>
 
-        {{-- 3. Monto Total --}}
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
-            ${{ number_format($prestamo->monto_total_pagar, 2) }}
+        <td   td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
+            ${{ number_format($prestamo->total_recuperar_con_multa, 2) }}
         </td>
 
         {{-- 4. Pagado (Optimizado sin N+1) --}}

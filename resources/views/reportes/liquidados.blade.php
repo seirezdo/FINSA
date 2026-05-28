@@ -4,7 +4,10 @@
             {{ __('Historial de Clientes Liquidados') }}
         </h2>
     </x-slot>
-
+  {{-- BOTÓN DE VOLVER: Como no hay menú de reportes, regresamos al inicio --}}
+    <x-slot name="backUrl">
+        {{ route('dashboard') }}
+    </x-slot>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-t-4 border-blue-500">

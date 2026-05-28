@@ -5,10 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Pago;
-use App\Models\Prestamo; // <-- Esta es la línea que te falta
-use App\Models\CalendarioPago;
-use Illuminate\Support\Facades\DB;
+use App\Models\Prestamo; 
+
 class StorePagoRequest extends FormRequest
 
 {

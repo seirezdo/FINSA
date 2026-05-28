@@ -15,12 +15,14 @@
                         class="hover:bg-gray-50 cursor-pointer transition">
                     <td class="px-6 py-4">
                         <div class="text-sm font-medium text-gray-900">
-                            <?php echo e($cliente->persona->nombre); ?> <?php echo e($cliente->persona->apellido_paterno); ?> <?php echo e($cliente->persona->apellido_materno); ?>
+                            
+                            <?php echo e($cliente->nombre); ?>
 
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
-                        <?php echo e($cliente->persona->numero_documento); ?>
+                        
+                        <?php echo e($cliente->curp); ?>
 
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
@@ -37,7 +39,8 @@
                         <a href="<?php echo e(route('clientes.edit', $cliente)); ?>" class="text-indigo-600 hover:text-indigo-900 mr-3 font-bold">Editar</a>
                         
                         
-                        <?php if(auth()->user()->role === \App\Enums\UserRole::ADMIN): ?>
+                        
+                        <?php if(auth()->user()->role === \App\Enums\UserRole::ADMIN->value): ?>
                             <form action="<?php echo e(route('clientes.destroy', $cliente->id)); ?>" method="POST" class="inline">
                                 <?php echo csrf_field(); ?>
                                 <?php echo method_field('DELETE'); ?>

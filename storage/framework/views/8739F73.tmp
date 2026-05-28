@@ -38,4 +38,4 @@ $classes = ($active ?? false)
     <?php echo e($slot); ?>
 
 </a>
-<?php /**PATH C:\laragon\www\FINSA\resources\views/components/nav-link.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\laragon\www\Prueba1\resources\views/components/nav-link.blade.php ENDPATH**/ ?>

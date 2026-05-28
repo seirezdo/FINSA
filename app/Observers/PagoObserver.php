@@ -6,20 +6,19 @@ use App\Models\Pago;
 
 class PagoObserver
 {
-    public function created(Pago $pago)
+     public function created(Pago $pago)
     {
-        // Obtenemos el préstamo a través de la relación de la cuota [4, 5]
+        // 1. Obtenemos el préstamo a través de la relación
         $prestamo = $pago->calendarioPago->prestamo;
 
-        // Calculamos el total pagado históricamente en este crédito
-        $totalPagado = $prestamo->calendarioPagos()->withSum('pagos', 'monto_pagado')->get()->sum('pagos_sum_monto_pagado');
+        // 2. Sumamos TODO el dinero directamente en la base de datos (Ultra rápido)
+        $totalPagado = $prestamo->pagos()->sum('monto_pagado');
 
-        // Si el total pagado es igual o mayor al monto total a pagar, liquidamos
+        // 3. Si el total pagado cubre o supera la deuda, cerramos el crédito
         if ($totalPagado >= $prestamo->monto_total_pagar) {
             $prestamo->update(['estado' => 'liquidado']);
         }
-    }
-
+ }
 
     /**
      * Handle the Pago "updated" event.

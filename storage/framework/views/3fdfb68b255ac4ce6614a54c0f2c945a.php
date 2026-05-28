@@ -14,7 +14,11 @@
 
         </h2>
      <?php $__env->endSlot(); ?>
+  
+     <?php $__env->slot('backUrl', null, []); ?> 
+        <?php echo e(route('dashboard')); ?>
 
+     <?php $__env->endSlot(); ?>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-t-4 border-green-500">
@@ -40,12 +44,7 @@
         class="hover:bg-green-50 cursor-pointer transition group">
         
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-            <?php echo e($prestamo->cliente->persona->nombre); ?>
-
-        </td>
-
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-            <?php echo e($prestamo->grupo->nombre ?? 'N/A'); ?>
+            <?php echo e($prestamo->cliente->nombre); ?>
 
         </td>
 

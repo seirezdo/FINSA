@@ -14,7 +14,11 @@
 
         </h2>
      <?php $__env->endSlot(); ?>
+  
+     <?php $__env->slot('backUrl', null, []); ?> 
+        <?php echo e(route('dashboard')); ?>
 
+     <?php $__env->endSlot(); ?>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -37,44 +41,44 @@
                       <tbody class="bg-white divide-y divide-gray-200">
     <?php $__empty_1 = true; $__currentLoopData = $carteraVencida; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $prestamo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
     
-    <tr onclick="window.location='<?php echo e(route('prestamos.show', $prestamo->id)); ?>'" 
+     <tr onclick="window.location='<?php echo e(route('prestamos.show', $prestamo->id)); ?>'" 
         class="hover:bg-red-50 cursor-pointer transition group">
         
+        
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-            <?php echo e($prestamo->cliente->persona->nombre); ?>
+            <?php echo e($prestamo->cliente->nombre); ?>
 
         </td>
 
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-            <?php echo e($prestamo->grupo->nombre ?? 'N/A'); ?>
+        
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+            <?php echo e($prestamo->grupo->nombre ?? 'Sin asignar'); ?>
 
         </td>
 
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
-            $<?php echo e(number_format($prestamo->monto_total_pagar, 2)); ?>
+        <td   td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-center">
+            $<?php echo e(number_format($prestamo->total_recuperar_con_multa, 2)); ?>
 
         </td>
 
         
         <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold text-center">
-            $<?php echo e(number_format($prestamo->calendarioPagos->where('estado', 'pagado')->sum('monto_esperado'), 2)); ?>
+            $<?php echo e(number_format($prestamo->monto_recuperado ?? 0, 2)); ?>
 
         </td>
 
         
         <td class="px-6 py-4 whitespace-nowrap text-center">
             <span class="px-2 py-1 text-xs font-bold rounded bg-red-100 text-red-800">
-                <?php echo e($prestamo->calendarioPagos->where('estado', 'pagado')->count()); ?> / <?php echo e($prestamo->semanas); ?>
+                <?php echo e($prestamo->semanas_pagadas); ?> / <?php echo e($prestamo->semanas); ?>
 
             </span>
+
             
-            <?php if($prestamo->calendarioPagos->where('numero_semana', '>', 12)->count() > 0): ?>
+            <?php if($prestamo->en_prorroga): ?>
                 <span class="block text-[9px] text-red-600 font-black uppercase mt-1">En Prórroga</span>
             <?php endif; ?>
         </td>
-
-        
-      
     </tr>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
     <tr>

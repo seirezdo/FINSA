@@ -56,49 +56,66 @@ class PrestamoController extends Controller
     /**
      * Almacena el préstamo y genera el calendario de 12 semanas.
      */
-      public function store(Request $request)
-    {
-        $request->validate([
-            'cliente_id' => 'required|exists:clientes,id',
-            'monto_prestado' => 'required|numeric|min:1000',
+   public function store(Request $request)
+{
+    // 1. Volvemos a exigir la fecha en la validación inicial
+    $request->validate([
+        'cliente_id'       => 'required|exists:clientes,id',
+        'monto_prestado'   => 'required|numeric|min:1000',
+        'fecha_desembolso' => 'required|date',
+        'semanas'          => 'required|integer',
+    ]);
+
+    // 2. Calculamos cuál es el sábado base de la semana ACTUAL (Ej. 23 de mayo de 2026)
+    $sabadoActual = now()->isSaturday() 
+        ? now()->startOfDay() 
+        : now()->previous(Carbon::SATURDAY)->startOfDay();
+
+    // 3. CANDADO ESTRICTO: Leemos la fecha que la supervisora puso en el formulario
+    $fechaIngresada = Carbon::parse($request->fecha_desembolso);
+
+    // Si la fecha ingresada es más vieja que nuestro sábado base, ¡BLOQUEAMOS LA OPERACIÓN!
+    if ($fechaIngresada->lessThan($sabadoActual)) {
+        return back()->with('error', 'No se puede registrar. Ya cerramos operaciones de semanas anteriores y no estamos trabajando con esa fecha.');
+    }
+
+    $cliente = Cliente::findOrFail($request->cliente_id);
+    
+    // 4. Verificamos que no tenga un préstamo activo
+    if ($cliente->prestamos()->where('estado', 'activo')->exists()) {
+        return back()->with('error', 'El cliente ya tiene un préstamo activo.');
+    }
+
+    // 5. Iniciamos la transacción (sabiendo que la fecha ya es válida)
+    DB::transaction(function () use ($request, $cliente, $sabadoActual) {
+        
+        $prestamo = Prestamo::create([
+            'cliente_id'        => $request->cliente_id,
+            'grupo_id'          => $cliente->grupo_id,
+            'monto_prestado'    => $request->monto_prestado,
+            'monto_total_pagar' => $request->monto_prestado * 1.5,
+            'tasa_interes'      => 12.5, 
+            'semanas'           => $request->semanas, 
+            'estado'            => 'activo',
+            'fecha_inicio'      => $sabadoActual, // Guardamos con la fecha oficial del sábado
         ]);
 
-        $cliente = Cliente::findOrFail($request->cliente_id);
+        $montoSemanal = $prestamo->monto_total_pagar / $prestamo->semanas;
         
-        if ($cliente->prestamos()->where('estado', 'activo')->exists()) {
-            return back()->with('error', 'El cliente ya tiene un préstamo activo.');
-        }
-
-        // 1. CORREGIDO: Pasamos $cliente al interior de la transacción usando "use"
-         DB::transaction(function () use ($request, $cliente) {
-            
-            $prestamo = Prestamo::create([
-                'cliente_id'        => $request->cliente_id,
-                'grupo_id'          => $cliente->grupo_id,
-                'monto_prestado'    => $request->monto_prestado,
-                'monto_total_pagar' => $request->monto_prestado * 1.5,
-                'tasa_interes'      => 12.5, 
-                'semanas'           => 12, // <--- ¡NUEVO: Le indicamos la duración del crédito!
-                'estado'            => 'activo',
-                'fecha_inicio'      => now(),
+        // 6. Creamos el calendario
+        for ($i = 1; $i <= $request->semanas; $i++) {
+            $prestamo->calendarioPagos()->create([
+                'numero_semana'     => $i,
+                'fecha_vencimiento' => $sabadoActual->copy()->addWeeks($i), 
+                'monto_esperado'    => $montoSemanal,
+                'estado'            => 'pendiente',
             ]);
+        }
+    });
 
-           $montoSemanal = $request->monto_prestado * 0.125;
-            
-            for ($i = 1; $i <= 12; $i++) {
-                // Generación automática del calendario de pagos
-                $prestamo->calendarioPagos()->create([
-                    'numero_semana'     => $i,
-                    'fecha_vencimiento' => now()->addWeeks($i),
-                    'monto_esperado'    => $montoSemanal,
-                    'estado'            => 'pendiente', // <--- AQUÍ GARANTIZAMOS ESTO
-                ]);
-            }
-        });
-
-        return redirect()->route('clientes.show', $request->cliente_id)
-                         ->with('success', 'Préstamo y calendario creados exitosamente.');
-    }
+    return redirect()->route('clientes.show', $request->cliente_id)
+                     ->with('success', 'Préstamo autorizado. El primer pago se espera para el próximo sábado.');
+}
 
 
      public function reporteLiquidados()
@@ -160,31 +177,14 @@ class PrestamoController extends Controller
 
         return view('reportes.cartera_vencida', compact('carteraVencida'));
     }
-    public function show(Prestamo $prestamo)
+  public function show(Prestamo $prestamo)
     {
-        $cuotasVencidas = $prestamo->calendarioPagos()
-            ->whereIn('estado', ['pendiente', 'parcial'])
-            ->where('fecha_vencimiento', '<', Carbon::now()->format('Y-m-d'))
-            ->get();
+        // 1. Cargamos el préstamo, su cliente y su historial de pagos ordenado
+        $prestamo->load(['cliente', 'calendarioPagos' => function($query) {
+            $query->orderBy('numero_semana', 'asc')->with('pagos');
+        }]);
 
-        foreach ($cuotasVencidas as $cuota) {
-            $cuota->update(['estado' => 'falla']);
-        }
-
-        $tieneFallas = $prestamo->calendarioPagos()->where('estado', 'falla')->exists();
-        $existeSemana13 = $prestamo->calendarioPagos()->where('numero_semana', 13)->exists();
-
-        if ($tieneFallas && !$existeSemana13) {
-            $ultimaCuota = $prestamo->calendarioPagos()->orderBy('numero_semana', 'desc')->first();
-
-            $prestamo->calendarioPagos()->create([
-                'numero_semana'     => 13,
-                'monto_esperado'    => 0,
-                'estado'            => 'pendiente',
-                'fecha_vencimiento' => Carbon::parse($ultimaCuota->fecha_vencimiento)->addDays(7)
-            ]);
-        }
-
+        // 2. Retornamos la vista (SIN alterar la base de datos)
         return view('prestamos.show', compact('prestamo'));
     }
 

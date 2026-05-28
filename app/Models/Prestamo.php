@@ -24,9 +24,22 @@ class Prestamo extends Model
     public function cliente() {
         return $this->belongsTo(Cliente::class, 'cliente_id');
     }
+  public function getTotalRecuperarConMultaAttribute()
+    {
+        // Sumamos solo el dinero de las semanas que no pagó
+        $deudaVencida = $this->calendarioPagos()->where('estado', 'falla')->sum('monto_esperado');
 
-    public function aval() {
-        return $this->belongsTo(Cliente::class, 'aval_id');
+        if ($deudaVencida > 0) {
+            // CÁLCULO DINÁMICO: Total a pagar entre las semanas de duración
+            $semanaExtra = $this->monto_total_pagar / $this->semanas;
+            
+            return $deudaVencida + $semanaExtra; // Cobra atraso + la multa
+        }
+
+        return $this->monto_total_pagar; 
+    }
+    public function aval() {    
+        return $this->belongsTo(Persona::class, 'aval_id');
     }
 
     public function grupo() {
@@ -40,15 +53,9 @@ class Prestamo extends Model
     // ==========================================
     // NUEVA RELACIÓN: Historial de Pagos directos
     // ==========================================
-   public function pagos() {
-        return $this->hasManyThrough(
-            Pago::class, 
-            CalendarioPago::class,
-            'prestamo_id', // Llave foránea en la tabla intermedia (calendario_pagos)
-            'calendario_pago_id', // Llave foránea en la tabla final (pagos)
-            'id', // Llave local en prestamos
-            'id'  // Llave local en calendario_pagos
-        );
-    }
-      
+   public function pagos()
+{
+    // Un préstamo tiene muchos pagos, a través de su calendario de pagos [4]
+    return $this->hasManyThrough(Pago::class, CalendarioPago::class);
+}
 }

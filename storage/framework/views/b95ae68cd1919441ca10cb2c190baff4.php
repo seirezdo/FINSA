@@ -10,7 +10,7 @@
 <?php $component->withAttributes([]); ?>
      <?php $__env->slot('header', null, []); ?> 
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            <?php echo e(__('Expediente Detallado: ')); ?> <?php echo e($prestamo->cliente->persona->nombre); ?>
+            <?php echo e(__('Expediente Detallado: ')); ?> <?php echo e($prestamo->cliente->nombre); ?>
 
         </h2>
      <?php $__env->endSlot(); ?>
@@ -139,7 +139,7 @@
                             <span class="text-xs uppercase text-gray-400">Auditoría de Pagos Reales</span>
                         </div>
                         
-                        <div class="overflow-x-auto">
+    <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr class="text-center">
@@ -147,53 +147,135 @@
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Esperado</th>
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-green-700">Recuperado</th>
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                        <!-- NUEVA COLUMNA DE ACCIONES -->
+                                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody class="bg-white divide-y divide-gray-200 text-center">
-                                    <?php $__currentLoopData = $prestamo->calendarioPagos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cuota): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <tr class="<?php echo e($cuota->numero_semana > 12 ? 'bg-red-50' : 'hover:bg-gray-50'); ?> transition">
-                                        
-                                        <!-- Identificador de Semana -->
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-bold text-gray-900">Semana <?php echo e($cuota->numero_semana); ?></div>
-                                            <?php if($cuota->numero_semana > 12): ?>
-                                                <span class="text-[10px] font-black text-red-600 uppercase animate-pulse">Extension por Mora</span>
-                                            <?php endif; ?>
-                                        </td>
+                               <tbody class="bg-white divide-y divide-gray-200 text-center">
+    <?php $__currentLoopData = $prestamo->calendarioPagos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cuota): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+       <?php
+        $totalAbonado = $cuota->pagos->sum('monto_pagado');
+        $restante = $cuota->monto_esperado - $totalAbonado;
+        
+        // 1. Extraemos la fecha real de la cuota
+        $vencimiento = \Carbon\Carbon::parse($cuota->fecha_vencimiento);
+        
+        // 2. 🔥 NUEVA LÓGICA DE CORTE 🔥
+        // Calculamos cuál fue el último sábado que pasó (o el de hoy si es sábado)
+        $sabadoObjetivo = now()->isSaturday() 
+                            ? now()->startOfDay() 
+                            : now()->previous('Saturday')->startOfDay();
+        
+        // 3. Verificamos si esta cuota es exactamente la del sábado con el que estamos trabajando
+        $esSemanaActual = $vencimiento->isSameDay($sabadoObjetivo);
+    ?>
+    
+    <tr class="<?php echo e($cuota->numero_semana > 12 ? 'bg-red-50' : 'hover:bg-gray-50'); ?> transition">
+        
+        
+        <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm font-bold text-gray-900">
+                <?php echo e($vencimiento->format('d/m/Y')); ?>
 
-                                        <!-- Monto Esperado -->
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            $<?php echo e(number_format($cuota->monto_esperado, 2)); ?>
+            </div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
+                Semana <?php echo e($cuota->numero_semana); ?>
 
-                                        </td>
+            </div>
+            <?php if($cuota->numero_semana > 12): ?>
+            <span class="text-[10px] font-black text-red-600 uppercase animate-pulse">Extensión por Mora</span>
+            <?php endif; ?>
+        </td>
 
-                                        <!-- Comportamiento de Pago (Suma de abonos) -->
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                                            $<?php echo e(number_format($cuota->pagos->sum('monto_pagado'), 2)); ?>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">$<?php echo e(number_format($cuota->monto_esperado, 2)); ?></td>
+        
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+            $<?php echo e(number_format($totalAbonado, 2)); ?>
 
-                                            <?php if($cuota->pagos->count() > 1): ?>
-                                                <span class="block text-[9px] text-gray-400 italic">(<?php echo e($cuota->pagos->count()); ?> abonos)</span>
-                                            <?php endif; ?>
-                                        </td>
+            <?php if($cuota->pagos->count() > 1): ?>
+            <span class="block text-[9px] text-gray-400 italic">(<?php echo e($cuota->pagos->count()); ?> abonos)</span>
+            <?php endif; ?>
+        </td>
 
-                                        <!-- Estatus con Badges dinámicos -->
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm
-                                                <?php echo e($cuota->estado === 'pagado' ? 'bg-green-100 text-green-800 border border-green-200' : 
-                                                   ($cuota->estado === 'parcial' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 
-                                                   'bg-red-100 text-red-800 border border-red-200')); ?>">
-                                                <?php echo e($cuota->estado === 'pagado' ? 'PAGADO' : ($cuota->estado === 'parcial' ? 'PARCIAL' : 'FALLA')); ?>
+        <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm 
+                <?php echo e(in_array($cuota->estado, ['pagado', 'recuperado']) ? 'bg-green-100 text-green-800 border border-green-200' : 
+                  ($cuota->estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 
+                  'bg-red-100 text-red-800 border border-red-200')); ?>">
+                <?php echo e(strtoupper($cuota->estado)); ?>
 
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                </tbody>
+            </span>
+        </td>
+        
+        
+                <td class="px-2 py-4">
+            
+            <div class="flex flex-wrap items-center justify-center gap-2">
+                <?php if($cuota->estado === 'pendiente' || $cuota->estado === 'falla'): ?>
+                    
+                    
+                    <form action="<?php echo e(route('pagos.registrar')); ?>" method="POST" class="flex items-center gap-1 m-0">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="calendario_pago_id" value="<?php echo e($cuota->id); ?>">
+                        
+                        
+                        <input type="number" name="monto_pagado" step="0.01" min="1" max="<?php echo e($restante); ?>" value="<?php echo e($restante > 0 ? $restante : ''); ?>" class="border border-gray-300 rounded px-1 py-1 w-16 text-xs text-center" required placeholder="$">
+                        
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold">
+                            Abonar
+                        </button>
+                    </form>
+
+                    
+                    <?php if($cuota->estado === 'pendiente'): ?>
+                        <?php if($esSemanaActual): ?>
+                            <form action="<?php echo e(route('pagos.update', $cuota->id)); ?>" method="POST" class="m-0">
+                                <?php echo csrf_field(); ?>
+                                <?php echo method_field('PUT'); ?>
+                                <input type="hidden" name="accion" value="falla">
+                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold" onclick="return confirm('¿Confirmar falla por los $<?php echo e(number_format($restante, 2)); ?> restantes?')">
+                                    Falla
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            
+                            <span class="text-[9px] text-gray-400 italic px-1 text-center leading-tight">Solo<br>actual</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    
+                    <?php if($cuota->estado === 'falla'): ?>
+                        <form action="<?php echo e(route('pagos.update', $cuota->id)); ?>" method="POST" class="m-0">
+                            <?php echo csrf_field(); ?>
+                            <?php echo method_field('PUT'); ?>
+                            <input type="hidden" name="accion" value="recuperado">
+                            <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold">
+                                Recuperar
+                            </button>
+                        </form>
+                    <?php endif; ?>
+
+                <?php elseif($cuota->estado === 'pagado' || $cuota->estado === 'recuperado'): ?>
+                    <span class="text-green-600 font-bold flex items-center text-xs">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg>
+                        Cerrada
+                    </span>
+                <?php elseif($cuota->estado === 'falla_penalizada'): ?>
+                    <span class="text-red-600 font-bold flex items-center text-xs">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                        Multada
+                    </span>
+                <?php endif; ?>
+            </div>
+        </td>
+
+    </tr>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+</tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                
             </div>
         </div>
     </div>

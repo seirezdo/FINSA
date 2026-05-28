@@ -50,4 +50,4 @@
     <?php echo e($plazas->appends(request()->query())->links()); ?>
 
 </div>
-<?php /**PATH C:\laragon\www\FINSA\resources\views/plazas/partials/table.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\laragon\www\Prueba1\resources\views/plazas/partials/table.blade.php ENDPATH**/ ?>

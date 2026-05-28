@@ -11,46 +11,59 @@ use App\Models\Grupo;
 use App\Models\Prestamo;
 use App\Models\CalendarioPago;
 use App\Services\PagoService;
+ use App\Http\Controllers\PagoController; 
 
 class PagoController extends Controller
 {
-    public function registrarPago(Request $request)
+
+// ...
+
+public function registrarPago(Request $request)
     {
+        $cuota = CalendarioPago::findOrFail($request->calendario_pago_id);
+        
+        $totalAbonado = $cuota->pagos()->sum('monto_pagado');
+        $restante = $cuota->monto_esperado - $totalAbonado;
+
         $request->validate([
             'calendario_pago_id' => 'required|exists:calendario_pagos,id',
-            'monto_pagado' => 'required|numeric|min:0',
+            'monto_pagado'       => 'required|numeric|min:1|max:' . $restante, 
+        ], [
+            'monto_pagado.max' => 'Error: El monto no puede superar la deuda restante de $' . number_format($restante, 2),
         ]);
 
-        DB::transaction(function () use ($request) {
-            $cuota = CalendarioPago::findOrFail($request->calendario_pago_id);
-            $prestamo = $cuota->prestamo;
-
+        DB::transaction(function () use ($request, $cuota, $totalAbonado) {
+            
             Pago::create([
                 'calendario_pago_id' => $cuota->id,
-                'monto_pagado' => $request->monto_pagado,
-                'fecha_pago' => now(),
-                'registrado_por' => auth()->id(),
+                'monto_pagado'       => $request->monto_pagado,
+                'fecha_pago'         => now(),
+                'registrado_por'     => auth()->id(),
             ]);
 
-            if ($request->monto_pagado >= $cuota->monto_esperado) {
-                $cuota->update(['estado' => 'pagado']);
-            } else {
-                $cuota->update(['estado' => 'parcial']);
+            $nuevoTotalAbonado = $totalAbonado + $request->monto_pagado;
 
-                $ultimaSemana = $prestamo->calendarioPagos()->max('numero_semana');
-
-                $prestamo->calendarioPagos()->create([
-                    'numero_semana' => $ultimaSemana + 1,
-                    'fecha_vencimiento' => $cuota->fecha_vencimiento->addWeeks($ultimaSemana + 1),
-                    'monto_esperado' => $cuota->monto_esperado,
-                    'estado' => 'pendiente',
-                ]);
-            }
+            if ($nuevoTotalAbonado >= $cuota->monto_esperado) {
+                
+                // 🔥 NUEVA LÓGICA INTELIGENTE DE FECHAS 🔥
+                // Tomamos el final del día sábado que le toca pagar
+                $vencimiento = \Carbon\Carbon::parse($cuota->fecha_vencimiento)->endOfDay();
+                
+                if (now()->lessThanOrEqualTo($vencimiento)) {
+                    // Si liquida HOY y aún no pasa su sábado de corte, es un pago PERFECTO y a tiempo.
+                    // (No importa si el martes le habías puesto 'falla', el sistema lo limpia a 'pagado').
+                    $nuevoEstado = 'pagado';
+                } else {
+                    // Si liquida después del sábado de corte, ya estaba corriendo su semana de gracia.
+                    $nuevoEstado = 'recuperado';
+                }
+                
+                $cuota->update(['estado' => $nuevoEstado]);
+            } 
         });
 
-        return back()->with('success', 'Pago registrado correctamente.');
+        return back()->with('success', 'Abono registrado correctamente.');
     }
-
     public function grupo(Grupo $grupo)
     {
         $clientes = $grupo->clientes()->with(['prestamos' => function($q) {
@@ -103,13 +116,34 @@ class PagoController extends Controller
         //
     }
 
-    public function update(Request $request, string $id)
+     public function update(Request $request, $id)
     {
-        //
-    }
+        $cuota = \App\Models\CalendarioPago::findOrFail($id);
 
-    public function destroy(string $id)
-    {
-        //
+        if ($request->accion === 'falla') {
+            
+            // 🔥 CANDADO DE CORTE FINANCIERO 🔥
+            $sabadoObjetivo = now()->isSaturday() 
+                                ? now()->startOfDay() 
+                                : now()->previous('Saturday')->startOfDay();
+
+            $fechaVencimiento = \Carbon\Carbon::parse($cuota->fecha_vencimiento)->startOfDay();
+
+            // Bloquea si la cuota NO es del sábado anterior
+            if (!$fechaVencimiento->isSameDay($sabadoObjetivo)) {
+                return back()->with('error', 'Acción denegada: Solo puedes reportar falla en la semana correspondiente al corte del ' . $sabadoObjetivo->format('d/m/Y') . '.');
+            }
+
+            $cuota->update(['estado' => 'falla']);
+            $mensaje = 'Se registró la falla. El cliente tiene hasta el próximo sábado para recuperarla sin multa.';
+        
+        } elseif ($request->accion === 'recuperado') {
+            $cuota->update(['estado' => 'recuperado']); 
+            $mensaje = 'Cuota recuperada a tiempo. No se generará semana extra.';
+        } else {
+            return back()->with('error', 'Acción no válida.');
+        }
+
+        return back()->with('success', $mensaje);
     }
 }

@@ -8,43 +8,50 @@
 <?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
-     <?php $__env->slot('header', null, []); ?> 
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight"> Gestión de Plazas </h2>
-     <?php $__env->endSlot(); ?>
-
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zona</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        <?php $__currentLoopData = $plazas; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plaza): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <tr>
-                            <td class="px-6 py-4"><?php echo e($plaza->nombre); ?></td>
-                            <td class="px-6 py-4"><?php echo e($plaza->zona); ?></td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo e($plaza->estado == 'activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'); ?>">
-                                    <?php echo e(ucfirst($plaza->estado)); ?>
+           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-t-4 border-indigo-500 pb-0"> 
+                
+                
+                <div class="p-6 bg-gray-50 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-gray-700 uppercase">
+                            Gestión de Plazas
+                        </h2>
+                        
+                        
+                        <div class="relative w-1/3">
+                            <input type="text" id="search_plazas" placeholder="Buscar por nombre o zona..." 
+                                   class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 text-sm">
+                        </div>
 
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <a href="#" class="text-indigo-600 hover:text-indigo-900">Editar</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </tbody>
-                </table>
+                        <a href="<?php echo e(route('plazas.create')); ?>" class="px-4 py-2 bg-indigo-600 text-white rounded-md text-xs font-bold uppercase">
+                            + Nueva Plaza
+                        </a>
+                    </div>
+                </div>
+
+                
+                <div id="table-container-plazas" class="overflow-x-auto">
+                    <?php echo $__env->make('plazas.partials.table', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                </div>
             </div>
         </div>
     </div>
+
+    
+    <script>
+        document.getElementById('search_plazas').addEventListener('input', function(e) {
+            let query = e.target.value;
+            fetch(`/plazas?search=${query}`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('table-container-plazas').innerHTML = html;
+            });
+        });
+    </script>
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>

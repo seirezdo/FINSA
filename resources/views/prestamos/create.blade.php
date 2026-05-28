@@ -43,6 +43,13 @@
                         @endif
                     </div>
 
+                    <!-- NUEVO: FECHA DE ENTREGA (Para calcular el sábado anterior) -->
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Fecha de Entrega / Desembolso</label>
+                        <input type="date" name="fecha_desembolso" value="{{ date('Y-m-d') }}" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500" required>
+                        <p class="text-xs text-gray-500 mt-1">El sistema calculará automáticamente el <strong>sábado anterior</strong> a esta fecha como inicio de la semana 1.</p>
+                    </div>
+
                     <!-- MONTO DEL PRÉSTAMO -->
                     <div class="mb-4">
                         <label class="block text-gray-700 text-sm font-bold mb-2">Monto del Préstamo ($)</label>
@@ -54,12 +61,12 @@
                         <p class="text-sm text-blue-800 italic">
                             * Al confirmar, se generarán automáticamente <strong>12 cuotas semanales</strong> del <strong>12.5%</strong> cada una.
                         </p>
+                        {{-- Mandamos las semanas por detrás para que el controlador las reciba --}}
+                        <input type="hidden" name="semanas" value="12">
                     </div>
 
                     <!-- BOTONES DE ACCIÓN -->
                     <div class="flex items-center justify-end">
-                        
-                        {{-- Botón de cancelar dinámico --}}
                         @if($clienteSeleccionado)
                             <a href="{{ route('clientes.show', $clienteSeleccionado->id) }}" class="mr-4 text-gray-600 hover:underline">Cancelar</a>
                         @else

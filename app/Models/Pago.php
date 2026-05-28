@@ -17,7 +17,7 @@ class Pago extends Model
         'fecha_pago', 
         'metodo_pago', 
         'registrado_por'
-    ];
+    ];  
     /**
      * 2. Relación Inversa: Un pago pertenece a una cuota del calendario [1, 4]
      */
