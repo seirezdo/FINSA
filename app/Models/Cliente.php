@@ -25,6 +25,24 @@ class Cliente extends Model
     // --- RELACIONES ---
 
     // 2. No existe la relación Persona. Los datos del cliente están en esta tabla.
+    public function prestamosComoAval(): HasMany
+    {
+        return $this->hasMany(Prestamo::class, 'aval_id');
+    }
+
+    // Algoritmo de bloqueo: Devuelve TRUE si la persona representa un riesgo financiero
+    public function estaBloqueadoPorRiesgo()
+    {
+        // 1. ¿Tiene un préstamo propio activo (que NO esté 'liquidado')?
+        $prestamoActivo = $this->prestamos()->where('estado', '!=', 'liquidado')->exists();
+        
+        // 2. ¿Es aval de un préstamo ajeno que NO está 'liquidado'?
+        // 🔥 Actualizado para usar el nuevo nombre de la relación 🔥
+        $avalActivo = $this->prestamosComoAval()->where('estado', '!=', 'liquidado')->exists();
+
+        // Si cualquiera de las dos es cierta, el sistema lo considerará bloqueado
+        return $prestamoActivo || $avalActivo;
+    }
 
     public function grupo(): BelongsTo
     {
@@ -36,6 +54,7 @@ class Cliente extends Model
         // Al llamarse el modelo Cliente, Laravel deduce automáticamente 'cliente_id'
         return $this->hasMany(Prestamo::class); 
     }
+
 
     // --- SCOPES (Lo que falta para corregir el error) ---
 

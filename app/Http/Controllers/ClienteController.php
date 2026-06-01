@@ -1,171 +1,146 @@
-<?php
+<?php 
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers; 
 
-use Illuminate\Http\Request;
-use App\Models\Cliente;
-use App\Models\Prestamos;
-use App\Models\Grupo;
-use App\Http\Requests\StoreClienteRequest;
-use Illuminate\Support\Facades\DB;
-use App\Enums\UserRole;
-class ClienteController extends Controller
-{
-  public function index(Request $request)
-    {
-        // 1. Optimización (Evitar N+1): Cargamos grupo, plaza y promotora [8, 9]
-        // NECESARIO: Ya no cargamos 'persona' porque los datos viven en 'clientes'
-        $query = Cliente::with(['grupo.plaza', 'grupo.promotora']);
+use Illuminate\Http\Request; 
+use App\Models\Cliente; 
+use App\Models\Prestamo; // Usaremos el singular para no causar conflictos
+use App\Models\Grupo; 
+use App\Http\Requests\StoreClienteRequest; 
+use Illuminate\Support\Facades\DB; 
+use App\Enums\UserRole; 
 
-        // 2. Seguridad por Roles: Filtramos los datos según quién esté viendo [7, 10]
-        $usuario = auth()->user();
-        if ($usuario->role === UserRole::PROMOTORA) {
-            // NECESARIO: La promotora_id vive en el grupo, no en el cliente.
-            $query->whereHas('grupo', function ($q) use ($usuario) {
-                $q->where('promotora_id', $usuario->id);
-            });
-        } elseif ($usuario->role === UserRole::SUPERVISORA) {
-            // La supervisora solo ve clientes de los grupos de su plaza
-            $query->whereHas('grupo.plaza', function ($q) use ($usuario) {
-                $q->where('supervisora_id', $usuario->id);
-            });
-        }
+class ClienteController extends Controller 
+{ 
+    public function index(Request $request) 
+    { 
+        $query = Cliente::with(['grupo.plaza', 'grupo.promotora']); 
+        $usuario = auth()->user(); 
 
-        // 3. Búsqueda Dinámica y Filtros Avanzados
-        if ($request->has('search') && $request->search != '') {
-            $termino = $request->search;
-            // NECESARIO: Buscamos directamente en la tabla clientes (ya no en la relación persona)
-            $query->where(function($q) use ($termino) {
-                $q->where('nombre', 'LIKE', "%{$termino}%")
-                  ->orWhere('curp', 'LIKE', "%{$termino}%");
-            });
-        }
+        if ($usuario->role === UserRole::PROMOTORA) { 
+            $query->whereHas('grupo', function ($q) use ($usuario) { 
+                $q->where('promotora_id', $usuario->id); 
+            }); 
+        } elseif ($usuario->role === UserRole::SUPERVISORA) { 
+            $query->whereHas('grupo', function ($qGrupo) use ($usuario) { 
+                $qGrupo->whereHas('plaza', function ($qPlaza) use ($usuario) { 
+                    $qPlaza->where('supervisora_id', $usuario->id); 
+                }); 
+            }); 
+        } elseif ($usuario->role === UserRole::EJECUTIVO) { 
+            $query->whereHas('grupo', function ($qGrupo) use ($usuario) { 
+                $qGrupo->whereHas('plaza', function ($qPlaza) use ($usuario) { 
+                    $qPlaza->where('ejecutivo_id', $usuario->id); 
+                }); 
+            }); 
+        } 
 
-        // 4. Paginación: Para manejar miles de registros sin congelar la app [8]
-        $clientes = $query->latest()->paginate(10);
+        if ($request->has('search') && $request->search != '') { 
+            $termino = $request->search; 
+            $query->where(function($q) use ($termino) { 
+                $q->where('nombre', 'LIKE', "%{$termino}%")->orWhere('curp', 'LIKE', "%{$termino}%"); 
+            }); 
+        } 
 
-        // 5. Respuesta AJAX: Conservado, ¡excelente implementación de UX!
-        if ($request->ajax()) {
-            return view('clientes.partials.table', compact('clientes'))->render();
-        }
+        $clientes = $query->latest()->paginate(10); 
 
-        return view('clientes.index', compact('clientes'));
-    }
+        if ($request->ajax()) { 
+            return view('clientes.partials.table', compact('clientes'))->render(); 
+        } 
+        
+        return view('clientes.index', compact('clientes')); 
+    } 
 
     public function create() 
-    {
-        // MEJORA OPCIONAL PERO RECOMENDADA: 
-        // Si entra una promotora, solo debería ver en el select sus propios grupos, 
-        // no los de toda la microfinanciera.
-        $usuario = auth()->user();
-        
-        if ($usuario->role === UserRole::PROMOTORA) {
-            $grupos = Grupo::where('promotora_id', $usuario->id)->get();
-        } else {
-            $grupos = Grupo::all(); // Admin o Ejecutivos ven todos
+    { 
+        // BLOQUEO: Promotoras y Supervisoras no pueden crear clientes
+        if (in_array(auth()->user()->role, [UserRole::SUPERVISORA, UserRole::PROMOTORA])) {
+            return back()->with('swal_error', 'Acceso denegado: No tienes permisos para registrar clientes.');
         }
 
-        return view('clientes.create', compact('grupos'));
-    }    
+        $grupos = Grupo::all(); 
+        return view('clientes.create', compact('grupos')); 
+    } 
 
-     public function store(StoreClienteRequest $request) 
-    {
-        // 1. Extraemos SOLO los datos que ya pasaron las reglas de validación de tu StoreClienteRequest
-        // Esto automáticamente trae 'nombre', 'curp', 'telefono', 'direccion', 'grupo_id' y 'perfil_riesgo'
-        $datosValidados = $request->validated();
+    public function store(StoreClienteRequest $request) 
+    { 
+        // BLOQUEO: Por si intentan enviar una petición POST fraudulenta
+        if (in_array(auth()->user()->role, [UserRole::SUPERVISORA, UserRole::PROMOTORA])) {
+            return back()->with('swal_error', 'Acceso denegado.');
+        }
 
-        // 2. Agregamos los campos automáticos que el usuario no llena en el formulario
-        $datosValidados['fecha_registro'] = now();
-        $datosValidados['estado']         = 'activo';
+        $datosValidados = $request->validated(); 
+        $datosValidados['fecha_registro'] = now(); 
+        $datosValidados['estado'] = 'activo'; 
         
-        // 3. ¡Verdadero Mass Assignment! Guardamos todo de golpe y de forma segura
-        Cliente::create($datosValidados);
+        Cliente::create($datosValidados); 
+        return redirect()->route('clientes.index')->with('success', '¡Cliente registrado y vinculado a su grupo exitosamente!'); 
+    } 
 
-        return redirect()->route('clientes.index')
-            ->with('success', '¡Cliente registrado y vinculado a su grupo exitosamente!');
-    }
-
-
-   
-       public function show(Cliente $cliente)
-    {
-        // 1. Cargamos la información base del cliente (Grupo y Plaza)
-     $cliente->load(['grupo.plaza', 'grupo.promotora']);
-
-        // 2. Buscamos los préstamos del cliente con las métricas optimizadas
-        $prestamos = \App\Models\Prestamo::where('cliente_id', $cliente->id)
-            ->withCount(['calendarioPagos as semanas_pagadas' => function($query) {
-                $query->where('estado', 'pagado');
-            }])
-            ->withSum(['calendarioPagos as monto_recuperado' => function($query) {
-                $query->where('estado', 'pagado');
-            }], 'monto_esperado')
-            ->withExists(['calendarioPagos as en_prorroga' => function($query) {
-                $query->where('numero_semana', '>', 12);
-            }])
-            ->latest() // Los más recientes primero
+    public function show(Cliente $cliente) 
+    { 
+        $cliente->load(['grupo.plaza', 'grupo.promotora']); 
+        
+        // CORRECCIÓN: Llamamos a la relación en plural "pagos"
+        $prestamos = \App\Models\Prestamo::with('calendarioPagos.pagos')
+            ->where('cliente_id', $cliente->id)
+            ->latest()
+            ->get(); 
+        
+        $prestamosComoAval = \App\Models\Prestamo::with('cliente')
+            ->where('aval_id', $cliente->id)
+            ->latest()
             ->get();
 
-        // 3. Enviamos el cliente y sus préstamos a la vista
-        return view('clientes.show', compact('cliente', 'prestamos'));
-    }
+        return view('clientes.show', compact('cliente', 'prestamos', 'prestamosComoAval')); 
+    } 
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-   public function edit(Cliente $cliente)
-{
-    // Cargamos la relación para evitar consultas N+1 en la vista [6]
-        $usuario = auth()->user();
-        if ($usuario->role === \App\Enums\UserRole::PROMOTORA->value) {
-            $grupos = \App\Models\Grupo::where('promotora_id', $usuario->id)->get();
-        } else {
-            $grupos = \App\Models\Grupo::all(); 
+    public function edit(Cliente $cliente) 
+    { 
+        // BLOQUEO DE SEGURIDAD (Solución a Error 1 y 2)
+        if (in_array(auth()->user()->role, [UserRole::SUPERVISORA, UserRole::PROMOTORA])) {
+            return back()->with('swal_error', 'Acceso denegado: Tu rol solo tiene permisos de lectura.');
         }
 
-        return view('clientes.edit', compact('cliente', 'grupos'));
-    }
+        $grupos = Grupo::all(); 
+        return view('clientes.edit', compact('cliente', 'grupos')); 
+    } 
 
-    /**
-     * Update the specified resource in storage.
-     */
-  public function update(Request $request, Cliente $cliente)
-    {
-        // 1. VALIDACIÓN CORREGIDA: Ahora valida contra la tabla 'clientes' y la columna 'curp' [9].
-        $request->validate([
-            'nombre'           => 'required|string|max:100',
-            'numero_documento' => 'nullable|string|unique:clientes,curp,' . $cliente->id, // Usa el id del cliente nativo
-            'grupo_id'         => 'required|exists:grupos,id',
-            'perfil_riesgo'    => 'required|string'
-        ]);
+    public function update(Request $request, Cliente $cliente) 
+    { 
+        // BLOQUEO DE SEGURIDAD
+        if (in_array(auth()->user()->role, [UserRole::SUPERVISORA, UserRole::PROMOTORA])) {
+            return back()->with('swal_error', 'Acceso denegado: No puedes modificar clientes.');
+        }
 
-        // 2. ACTUALIZACIÓN DIRECTA: Ya no necesitamos transacciones (DB::transaction) 
-        //    porque guardamos todo en una sola tabla [6].
-        $cliente->update([
-            'grupo_id'       => $request->grupo_id,
-            'nombre'         => $request->nombre,
-            'curp'           => $request->numero_documento,
-            'telefono'       => $request->telefono,
-            'direccion'      => $request->direccion,
-            'perfil_riesgo'  => $request->perfil_riesgo,
-            'estado'         => $request->estado ?? $cliente->estado
-        ]);
+        $request->validate([ 
+            'nombre' => 'required|string|max:100', 
+            'numero_documento' => 'nullable|string|unique:clientes,curp,' . $cliente->id, 
+            'grupo_id' => 'required|exists:grupos,id', 
+            'perfil_riesgo' => 'required|string' 
+        ]); 
 
-        return redirect()->route('clientes.index')
-            ->with('success', 'Expediente del cliente actualizado correctamente.');
-    }
+        $cliente->update([ 
+            'grupo_id' => $request->grupo_id, 
+            'nombre' => $request->nombre, 
+            'curp' => $request->numero_documento, 
+            'telefono' => $request->telefono, 
+            'direccion' => $request->direccion, 
+            'perfil_riesgo' => $request->perfil_riesgo, 
+            'estado' => $request->estado ?? $cliente->estado 
+        ]); 
 
-  
+        return redirect()->route('clientes.index')->with('success', 'Expediente del cliente actualizado correctamente.'); 
+    } 
 
-    /**
-     * Remove the specified resource from storage.
-     */
-     public function destroy(Cliente $cliente)
-    {
-        // Implementación básica para eliminar o "desactivar" al cliente
-        $cliente->delete();
-        
-        return redirect()->route('clientes.index')
-            ->with('success', 'Cliente eliminado del sistema.');
-    }
+    public function destroy(Cliente $cliente) 
+    { 
+        // BLOQUEO: Solo el Administrador puede eliminar
+        if (auth()->user()->role !== UserRole::ADMIN) {
+            return back()->with('swal_error', 'Acceso denegado: Solo el administrador puede eliminar registros.');
+        }
+
+        $cliente->delete(); 
+        return redirect()->route('clientes.index')->with('success', 'Cliente eliminado del sistema.'); 
+    } 
 }

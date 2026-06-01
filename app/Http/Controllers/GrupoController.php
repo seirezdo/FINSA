@@ -38,7 +38,10 @@ class GrupoController extends Controller
         
         return view('grupos.create', compact('plazas', 'promotoras'));
     }
-
+  public function plaza()
+    {
+        return $this->belongsTo(Plaza::class, 'plaza_id');
+    }
     public function store(Request $request)
     {
         // Validación estricta para asegurar la integridad [4]

@@ -26,9 +26,12 @@
                                    class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 pl-10 text-sm">
                         </div>
 
-                        <a href="<?php echo e(route('clientes.create')); ?>" class="px-4 py-2 bg-indigo-600 text-white rounded-md text-xs font-bold uppercase">
-                            + Nuevo Cliente
-                        </a>
+                        
+    <?php if(in_array(auth()->user()->role, [\App\Enums\UserRole::ADMIN, \App\Enums\UserRole::EJECUTIVO])): ?>
+        <a href="<?php echo e(route('clientes.create')); ?>" class="px-4 py-2 bg-indigo-600 text-white rounded-md text-xs font-bold uppercase">
+            + Nuevo Cliente
+        </a>
+    <?php endif; ?>
                     </div>
                 </div>
 
@@ -40,17 +43,30 @@
         </div>
     </div>
 
-   
+    
     <script>
-        document.getElementById('search').addEventListener('input', function(e) {
-            let query = e.target.value;
-            // Mostramos un efecto visual de carga opcional aquí
-            fetch(`/clientes?search=${query}`, {
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            })
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('table-container').innerHTML = html;
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('search');
+            const tableContainer = document.getElementById('table-container');
+            let timeout = null;
+
+            searchInput.addEventListener('input', function (e) {
+                clearTimeout(timeout);
+                
+                // Esperamos 300ms después de que deje de escribir para consultar la BD
+                timeout = setTimeout(() => {
+                    let query = e.target.value;
+                    
+                    // Usamos la ruta dinámica y codificamos el texto por si escriben símbolos
+                    fetch(`<?php echo e(route('clientes.index')); ?>?search=${encodeURIComponent(query)}`, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        tableContainer.innerHTML = html;
+                    })
+                    .catch(error => console.error('Error en la búsqueda:', error));
+                }, 300); 
             });
         });
     </script>

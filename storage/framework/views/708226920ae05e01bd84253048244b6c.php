@@ -47,34 +47,57 @@
             </main>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                
-                // Si el controlador envía un 'error' (como el rechazo del préstamo)
-                <?php if(session('error')): ?>
-                    Swal.fire({
-                        icon: 'error',
-                        title: '¡Acción Denegada!',
-                        text: '<?php echo e(session('error')); ?>',
-                        confirmButtonColor: '#ef4444', // Color rojo Tailwind
-                        background: '#ffffff',
-                    });
-                <?php endif; ?>
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-                // Si el controlador envía un 'success' (como cuando se crea bien el préstamo)
-                <?php if(session('success')): ?>
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: '<?php echo e(session('success')); ?>',
-                        confirmButtonColor: '#22c55e', // Color verde Tailwind
-                        timer: 3000, // Se cierra solo en 3 segundos
-                        showConfirmButton: false
-                    });
-                <?php endif; ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // 1. Si el controlador envía un 'error' (tu código anterior)
+            <?php if(session('error')): ?>
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡Acción Denegada!',
+                    text: '<?php echo session('error'); ?>',
+                    confirmButtonColor: '#ef4444', 
+                    background: '#ffffff',
+                });
+            <?php endif; ?>
 
-            });
-        </script>
+            // 2. Si el controlador envía un 'success' (tu código anterior)
+            <?php if(session('success')): ?>
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: '<?php echo session('success'); ?>',
+                    confirmButtonColor: '#22c55e', 
+                    timer: 3000, 
+                    showConfirmButton: false
+                });
+            <?php endif; ?>
+
+            // 3. Disparador de Alertas de Error del Aval (Nuevo)
+            <?php if(session('swal_error')): ?>
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Operación Rechazada',
+                    text: '<?php echo session('swal_error'); ?>',
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Entendido'
+                });
+            <?php endif; ?>
+
+            // 4. Disparador de Alertas de Éxito del Aval (Nuevo)
+            <?php if(session('swal_success')): ?>
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Operación Exitosa!',
+                    text: '<?php echo session('swal_success'); ?>',
+                    confirmButtonColor: '#22c55e',
+                    confirmButtonText: 'Continuar'
+                });
+            <?php endif; ?>
+
+        });
+    </script>
     </body>
 </html><?php /**PATH D:\laragon\www\Prueba1\resources\views/layouts/app.blade.php ENDPATH**/ ?>

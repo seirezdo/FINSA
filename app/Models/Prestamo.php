@@ -38,9 +38,10 @@ class Prestamo extends Model
 
         return $this->monto_total_pagar; 
     }
-    public function aval() {    
-        return $this->belongsTo(Persona::class, 'aval_id');
-    }
+public function aval()
+{
+    return $this->belongsTo(Cliente::class, 'aval_id');
+}
 
     public function grupo() {
         return $this->belongsTo(Grupo::class);

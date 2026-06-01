@@ -11,8 +11,8 @@
             @php 
                 $prestamo = $cliente->prestamos->first(); 
                 
-                // Buscamos la cuota que está corriendo (pendiente o en semana de gracia/falla)
-                $cuotaActiva = $prestamo->calendarioPagos->whereIn('estado', ['pendiente', 'falla'])->first();
+                // 🔥 MODIFICACIÓN 1: Incluimos 'falla_penalizada' para que no desaparezca de la tabla
+                $cuotaActiva = $prestamo->calendarioPagos->whereIn('estado', ['pendiente', 'falla', 'falla_penalizada'])->first();
 
                 // Si hay cuota activa, calculamos cuánto dinero ha entregado en la semana
                 if($cuotaActiva) {
@@ -20,12 +20,22 @@
                     $restante = $cuotaActiva->monto_esperado - $totalAbonado;
                 }
             @endphp
-            
+                
             @if($cuotaActiva)
-                <tr class="border-t {{ $cuotaActiva->estado === 'falla' ? 'bg-red-50' : '' }}">
+                {{-- 🔥 MODIFICACIÓN 2: Pintamos la fila de rojo si tiene CUALQUIERA de las dos fallas --}}
+                <tr class="border-t {{ in_array($cuotaActiva->estado, ['falla', 'falla_penalizada']) ? 'bg-red-50' : '' }}">
                     
-                    {{-- 1. CLIENTE --}}
-                      <td class="px-6 py-4 flex items-center space-x-3">
+                    {{-- 🔥 MODIFICACIÓN 3: Agregamos las 2 columnas que le faltaban a tu código para que cuadre la tabla --}}
+                    <td class="px-6 py-4 font-medium text-gray-900">
+                        {{ $cliente->nombre ?? 'Cliente' }}
+                    </td>
+                    
+                    <td class="px-6 py-4 text-blue-600 font-bold">
+                        ${{ number_format($restante, 2) }}
+                    </td>
+
+                    {{-- COLUMNA DE ACCIONES --}}
+                    <td class="px-6 py-4 flex items-center space-x-3">
 
                         {{-- BOTÓN A: AGREGAR ABONO --}}
                         <form action="{{ route('pagos.registrar') }}" method="POST" class="flex items-center space-x-2 m-0">
@@ -37,7 +47,7 @@
                             </button>
                         </form>
 
-                        {{-- BOTÓN B: COLOCAR FALLA (Ahora siempre disponible si está pendiente) --}}
+                        {{-- BOTÓN B: COLOCAR FALLA (Solo si está 'pendiente') --}}
                         @if($cuotaActiva->estado === 'pendiente')
                             <form action="{{ route('pagos.update', $cuotaActiva->id) }}" method="POST" class="m-0">
                                 @csrf
@@ -49,8 +59,9 @@
                             </form>
                         @endif
 
-                        {{-- BOTÓN C: RECUPERAR (Solo si está en falla) --}}
-                        @if($cuotaActiva->estado === 'falla')
+                        {{-- BOTÓN C: RECUPERAR --}}
+                        {{-- 🔥 MODIFICACIÓN 4: El botón recuperar ahora aparece tanto en 'falla' como en 'falla_penalizada' --}}
+                        @if(in_array($cuotaActiva->estado, ['falla', 'falla_penalizada']))
                             <form action="{{ route('pagos.update', $cuotaActiva->id) }}" method="POST" class="m-0">
                                 @csrf
                                 @method('PUT')

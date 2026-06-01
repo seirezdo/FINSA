@@ -45,34 +45,57 @@
             </main>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                
-                // Si el controlador envía un 'error' (como el rechazo del préstamo)
-                @if(session('error'))
-                    Swal.fire({
-                        icon: 'error',
-                        title: '¡Acción Denegada!',
-                        text: '{{ session('error') }}',
-                        confirmButtonColor: '#ef4444', // Color rojo Tailwind
-                        background: '#ffffff',
-                    });
-                @endif
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-                // Si el controlador envía un 'success' (como cuando se crea bien el préstamo)
-                @if(session('success'))
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: '{{ session('success') }}',
-                        confirmButtonColor: '#22c55e', // Color verde Tailwind
-                        timer: 3000, // Se cierra solo en 3 segundos
-                        showConfirmButton: false
-                    });
-                @endif
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // 1. Si el controlador envía un 'error' (tu código anterior)
+            @if(session('error'))
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡Acción Denegada!',
+                    text: '{!! session('error') !!}',
+                    confirmButtonColor: '#ef4444', 
+                    background: '#ffffff',
+                });
+            @endif
 
-            });
-        </script>
+            // 2. Si el controlador envía un 'success' (tu código anterior)
+            @if(session('success'))
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: '{!! session('success') !!}',
+                    confirmButtonColor: '#22c55e', 
+                    timer: 3000, 
+                    showConfirmButton: false
+                });
+            @endif
+
+            // 3. Disparador de Alertas de Error del Aval (Nuevo)
+            @if(session('swal_error'))
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Operación Rechazada',
+                    text: '{!! session('swal_error') !!}',
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Entendido'
+                });
+            @endif
+
+            // 4. Disparador de Alertas de Éxito del Aval (Nuevo)
+            @if(session('swal_success'))
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Operación Exitosa!',
+                    text: '{!! session('swal_success') !!}',
+                    confirmButtonColor: '#22c55e',
+                    confirmButtonText: 'Continuar'
+                });
+            @endif
+
+        });
+    </script>
     </body>
 </html>

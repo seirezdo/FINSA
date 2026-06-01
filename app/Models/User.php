@@ -5,25 +5,40 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use App\Enums\UserRole;
-#[Fillable(['name', 'email', 'password', 'estado', 'role'])] // Permite guardar estos campos [5]
-#[Hidden(['password', 'remember_token'])]
+
 class User extends Authenticatable
 {
-use HasFactory, Notifiable;
+    use HasFactory, Notifiable;
+
+    /**
+     * Los atributos que son asignables masivamente (Mass Assignment).
+     */
+    protected $fillable = [
+        'name', 
+        'email', 
+        'password', 
+        'estado', 
+        'role'
+    ];
+
+    /**
+     * Los atributos que deben ocultarse para la serialización (arrays/JSON).
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
 
     /**
      * Atributos que deben ser casteados.
      */
-  protected function casts(): array
-{
-    return [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-        'role' => UserRole::class, 
-    ];
-}
-
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'role' => UserRole::class, 
+        ];
+    }
 }

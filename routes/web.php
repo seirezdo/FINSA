@@ -15,7 +15,8 @@ Route::get('/', function () {
 });
 
 // ==========================================
-// PANEL DE CONTROL GENERAL Y PERFIL
+// NIVEL 0: ACCESO GENERAL 
+// (El DashboardController se encargará de filtrar qué ve cada quién)
 // ==========================================
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -27,7 +28,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // ==========================================
-// NIVEL 1: OPERACIONES DE CRÉDITO 
+// NIVEL 1: ACCESO OPERATIVO 
+// (Admin, Ejecutivo, Supervisora, Promotora)
+// ==========================================
+Route::middleware(['auth', 'role:admin,ejecutivo,supervisora,promotora'])->group(function () {
+    
+    // 🔥 CORRECCIÓN: Movimos a los clientes aquí. El Controlador ya se encarga de filtrar
+    // qué clientes ve cada rol y de prohibirles editar o crear.
+    Route::resource('clientes', ClienteController::class)->except(['destroy']);
+    
+    // Pagos y Mora
+    Route::post('/pagos', [PagoController::class, 'store'])->name('pagos.store');
+    Route::post('/prestamos/{prestamo}/extender-mora', [PrestamoController::class, 'extenderMora'])->name('prestamos.extender-mora');
+    Route::post('/pagos/registrar', [PagoController::class, 'registrarPago'])->name('pagos.registrar');
+    Route::put('/pagos/{calendario_pago}', [PagoController::class, 'update'])->name('pagos.update');
+});
+
+// ==========================================
+// NIVEL 2: ACCESO GERENCIAL Y SUPERVISIÓN 
 // (Admin, Ejecutivo, Supervisora)
 // ==========================================
 Route::middleware(['auth', 'role:admin,ejecutivo,supervisora'])->group(function () {
@@ -43,27 +61,6 @@ Route::middleware(['auth', 'role:admin,ejecutivo,supervisora'])->group(function 
     // Vista de cobranza por grupo
     Route::get('/cobranza/grupo/{grupo}', [PagoController::class, 'grupo'])->name('pagos.grupo');
     Route::get('/pagos/historial', [PagoController::class, 'index'])->name('pagos.index');
-});
-
-// ==========================================
-// NIVEL DE COBRO OPERATIVO 
-// (Admin, Ejecutivo, Supervisora, Promotora)
-// ==========================================
-Route::middleware(['auth', 'role:admin,ejecutivo,supervisora,promotora'])->group(function () {
-    Route::post('/pagos', [PagoController::class, 'store'])->name('pagos.store');
-    Route::post('/prestamos/{prestamo}/extender-mora', [PrestamoController::class, 'extenderMora'])->name('prestamos.extender-mora');
-    
-    // 🔥 AQUÍ ESTÁ LA SOLUCIÓN: Agregamos las rutas faltantes para los botones de la tabla 🔥
-    Route::post('/pagos/registrar', [PagoController::class, 'registrarPago'])->name('pagos.registrar');
-    Route::put('/pagos/{calendario_pago}', [PagoController::class, 'update'])->name('pagos.update');
-});
-
-// ==========================================
-// NIVEL 2: GESTIÓN DE CARTERA SENIOR 
-// (Restringido a Admin y Ejecutivo)
-// ==========================================
-Route::middleware(['auth', 'role:admin,ejecutivo'])->group(function () {
-    Route::resource('clientes', ClienteController::class)->except(['destroy']);
 });
 
 // ==========================================

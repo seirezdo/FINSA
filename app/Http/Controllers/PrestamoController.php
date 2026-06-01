@@ -35,87 +35,138 @@ class PrestamoController extends Controller
                                                ->where('estado', 'activo')
                                                ->exists();
 
-            // 2. Verificamos si tiene algún préstamo con cuotas en "falla" usando whereHas [2]
-            $tieneFallas = $clienteSeleccionado->prestamos()
-                                               ->whereHas('calendarioPagos', function($query) {
-                                                   $query->where('estado', 'falla');
-                                               })->exists();
+            // 2. Verificamos si tiene fallas (como titular o como aval)
+            $tieneFallas = $clienteSeleccionado->prestamos()->whereHas('calendarioPagos', function($q) {
+                $q->whereIn('estado', ['falla', 'falla_penalizada']);
+            })->exists();
 
-            // 3. Bloqueamos si se cumple cualquiera de las dos condiciones
-            if ($tieneActivo || $tieneFallas) {
-                // Enviamos el mensaje de error a la sesión de Laravel
-                return back()->with('error', 'El cliente tiene un crédito vigente o presenta pagos en falla. No se puede autorizar la renovación.');
+            $tieneFallasAval = $clienteSeleccionado->prestamosComoAval()->whereHas('calendarioPagos', function($q) {
+                $q->whereIn('estado', ['falla', 'falla_penalizada']);
+            })->exists();
+
+            // 3. Bloqueamos la renovación si se cumple alguna condición
+            if ($tieneActivo || $tieneFallas || $tieneFallasAval) {
+                return back()->with('error', 'El cliente tiene un crédito vigente o presenta pagos en falla (propios o como aval). No se puede autorizar la operación.');
             }
         }
 
-        $clientes = \App\Models\Cliente::where('estado', 'activo')->get();
+        // 🔥 FILTRO MAESTRO: Solo mandamos a la vista a clientes activos que NO tengan fallas 🔥
+        $clientes = \App\Models\Cliente::where('estado', 'activo')
+                        ->whereDoesntHave('prestamos.calendarioPagos', function($query) {
+                            $query->whereIn('estado', ['falla', 'falla_penalizada']);
+                        })
+                        ->whereDoesntHave('prestamosComoAval.calendarioPagos', function($query) {
+                            $query->whereIn('estado', ['falla', 'falla_penalizada']);
+                        })
+                        ->get();
 
         return view('prestamos.create', compact('clientes', 'clienteSeleccionado'));
     }
+
 
     /**
      * Almacena el préstamo y genera el calendario de 12 semanas.
      */
    public function store(Request $request)
-{
-    // 1. Volvemos a exigir la fecha en la validación inicial
-    $request->validate([
-        'cliente_id'       => 'required|exists:clientes,id',
-        'monto_prestado'   => 'required|numeric|min:1000',
-        'fecha_desembolso' => 'required|date',
-        'semanas'          => 'required|integer',
-    ]);
-
-    // 2. Calculamos cuál es el sábado base de la semana ACTUAL (Ej. 23 de mayo de 2026)
-    $sabadoActual = now()->isSaturday() 
-        ? now()->startOfDay() 
-        : now()->previous(Carbon::SATURDAY)->startOfDay();
-
-    // 3. CANDADO ESTRICTO: Leemos la fecha que la supervisora puso en el formulario
-    $fechaIngresada = Carbon::parse($request->fecha_desembolso);
-
-    // Si la fecha ingresada es más vieja que nuestro sábado base, ¡BLOQUEAMOS LA OPERACIÓN!
-    if ($fechaIngresada->lessThan($sabadoActual)) {
-        return back()->with('error', 'No se puede registrar. Ya cerramos operaciones de semanas anteriores y no estamos trabajando con esa fecha.');
-    }
-
-    $cliente = Cliente::findOrFail($request->cliente_id);
-    
-    // 4. Verificamos que no tenga un préstamo activo
-    if ($cliente->prestamos()->where('estado', 'activo')->exists()) {
-        return back()->with('error', 'El cliente ya tiene un préstamo activo.');
-    }
-
-    // 5. Iniciamos la transacción (sabiendo que la fecha ya es válida)
-    DB::transaction(function () use ($request, $cliente, $sabadoActual) {
-        
-        $prestamo = Prestamo::create([
-            'cliente_id'        => $request->cliente_id,
-            'grupo_id'          => $cliente->grupo_id,
-            'monto_prestado'    => $request->monto_prestado,
-            'monto_total_pagar' => $request->monto_prestado * 1.5,
-            'tasa_interes'      => 12.5, 
-            'semanas'           => $request->semanas, 
-            'estado'            => 'activo',
-            'fecha_inicio'      => $sabadoActual, // Guardamos con la fecha oficial del sábado
+    {
+        // 1. Exigimos el aval_id y validamos que NO sea el mismo cliente titular
+        $request->validate([
+            'cliente_id'       => 'required|exists:clientes,id',
+            'aval_id'          => 'required|exists:clientes,id|different:cliente_id',
+            'monto_prestado'   => 'required|numeric|min:1000',
+            'fecha_desembolso' => 'required|date',
+            'semanas'          => 'required|integer',
         ]);
 
-        $montoSemanal = $prestamo->monto_total_pagar / $prestamo->semanas;
-        
-        // 6. Creamos el calendario
-        for ($i = 1; $i <= $request->semanas; $i++) {
-            $prestamo->calendarioPagos()->create([
-                'numero_semana'     => $i,
-                'fecha_vencimiento' => $sabadoActual->copy()->addWeeks($i), 
-                'monto_esperado'    => $montoSemanal,
-                'estado'            => 'pendiente',
-            ]);
-        }
-    });
+        $sabadoActual = now()->isSaturday() 
+            ? now()->startOfDay() 
+            : now()->previous(\Carbon\Carbon::SATURDAY)->startOfDay();
 
-    return redirect()->route('clientes.show', $request->cliente_id)
-                     ->with('success', 'Préstamo autorizado. El primer pago se espera para el próximo sábado.');
-}
+        $fechaIngresada = \Carbon\Carbon::parse($request->fecha_desembolso);
+
+        if ($fechaIngresada->lessThan($sabadoActual)) {
+            return back()->with('error', 'No se puede registrar. Ya cerramos operaciones de semanas anteriores.');
+        }
+
+        $cliente = \App\Models\Cliente::findOrFail($request->cliente_id);
+        $aval    = \App\Models\Cliente::findOrFail($request->aval_id);
+        
+        // 🔥 ALGORITMO DE AVALES Y BLOQUEO POR MORA (PASO 1 y 2) 🔥
+
+        // 🔥 ALGORITMO ESTRICTO DE AVALES Y BLOQUEO POR MORA 🔥
+
+    // A) Evaluación del TITULAR: No debe tener préstamo activo
+    if ($cliente->prestamos()->where('estado', 'activo')->exists()) {
+        return back()->with('swal_error', 'El cliente solicitante ya tiene un préstamo activo.')->withInput();
+    }
+
+    // B) Evaluación del TITULAR: No debe tener fallas (como titular o aval)
+    $titularFallaPropia = $cliente->prestamos()->whereHas('calendarioPagos', function($q) {
+        $q->whereIn('estado', ['falla', 'falla_penalizada']);
+    })->exists();
+
+    $titularFallaComoAval = $cliente->prestamosComoAval()->whereHas('calendarioPagos', function($q) {
+        $q->whereIn('estado', ['falla', 'falla_penalizada']);
+    })->exists();
+
+    if ($titularFallaPropia || $titularFallaComoAval) {
+        return back()->with('swal_error', 'CLIENTE BLOQUEADO: Presenta historial de adeudos o multas.')->withInput();
+    }
+
+    // C) Evaluación Estricta del AVAL (CUMPLIENDO REGLAS 1, 5 y 6)
+    // Regla 6: El aval NO puede tener un crédito propio activo
+    
+
+    // Regla 1 y 5: El aval NO puede estar respaldando a otra persona actualmente
+    if ($aval->prestamosComoAval()->where('estado', 'activo')->exists()) {
+        return back()->with('swal_error', 'AVAL OCUPADO: Esta persona ya es aval de otro crédito activo. Un cliente solo puede avalar a una persona a la vez.')->withInput();
+    }
+
+    // D) Evaluación del AVAL: No debe tener fallas (como titular o aval)
+    $avalFallaPropia = $aval->prestamos()->whereHas('calendarioPagos', function($q) {
+        $q->whereIn('estado', ['falla', 'falla_penalizada']);
+    })->exists();
+
+    $avalFallaComoAval = $aval->prestamosComoAval()->whereHas('calendarioPagos', function($q) {
+        $q->whereIn('estado', ['falla', 'falla_penalizada']);
+    })->exists();
+
+    if ($avalFallaPropia || $avalFallaComoAval) {
+        return back()->with('swal_error', 'AVAL BLOQUEADO: La persona seleccionada presenta historial de adeudos o multas.')->withInput();
+    }
+
+    // 🔥 FIN ALGORITMO 🔥
+
+        // 5. Iniciamos la transacción ACID
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $cliente, $sabadoActual) {
+            
+            $prestamo = \App\Models\Prestamo::create([
+                'cliente_id'        => $request->cliente_id,
+                'aval_id'           => $request->aval_id, // Guardamos el Aval exitosamente
+                'grupo_id'          => $cliente->grupo_id,
+                'monto_prestado'    => $request->monto_prestado,
+                'monto_total_pagar' => $request->monto_prestado * 1.5,
+                'tasa_interes'      => 12.5, 
+                'semanas'           => $request->semanas, 
+                'estado'            => 'activo',
+                'fecha_inicio'      => $sabadoActual,
+            ]);
+
+            $montoSemanal = $prestamo->monto_total_pagar / $prestamo->semanas;
+            
+            for ($i = 1; $i <= $request->semanas; $i++) {
+                $prestamo->calendarioPagos()->create([
+                    'numero_semana'     => $i,
+                    'fecha_vencimiento' => $sabadoActual->copy()->addWeeks($i), 
+                    'monto_esperado'    => $montoSemanal,
+                    'estado'            => 'pendiente',
+                ]);
+            }
+        });
+
+        return redirect()->route('clientes.show', $request->cliente_id)
+                         ->with('success', 'Préstamo autorizado. El primer pago se espera para el próximo sábado.');
+    }
 
 
      public function reporteLiquidados()

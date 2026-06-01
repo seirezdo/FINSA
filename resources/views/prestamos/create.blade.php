@@ -55,7 +55,25 @@
                         <label class="block text-gray-700 text-sm font-bold mb-2">Monto del Préstamo ($)</label>
                         <input type="number" name="monto_prestado" step="100" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500" placeholder="Ej. 10000" required>
                     </div>
-
+   <!-- 🔥 NUEVO: SELECCIÓN DE AVAL (RF-04) 🔥 -->
+                    <div class="mb-6 bg-yellow-50 p-4 border border-yellow-200 rounded-md">
+                        <label class="block text-gray-800 text-sm font-bold mb-2">Seleccionar Aval (Garantía Solidaria)</label>
+                        <select name="aval_id" required class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500">
+                            <option value="">-- Seleccionar Aval --</option>
+                            @foreach($clientes as $aval)
+                                {{-- Si estamos en renovación, ocultamos al mismo titular para que no se auto-seleccione --}}
+                                @if(!$clienteSeleccionado || $clienteSeleccionado->id !== $aval->id)
+                                    <option value="{{ $aval->id }}" {{ old('aval_id') == $aval->id ? 'selected' : '' }}>
+                                        {{ $aval->nombre }} - CURP: {{ $aval->curp }}
+                                    </option>
+                                @endif
+                            @endforeach
+                        </select>
+                        @error('aval_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        <p class="text-xs text-yellow-700 mt-2">
+                            * El sistema bloqueará la solicitud si el aval seleccionado ya tiene un crédito activo, o si ya es aval de otra persona.
+                        </p>
+                    </div>
                     <!-- AVISO DE CUOTAS -->
                     <div class="bg-blue-50 p-4 rounded-md mb-6">
                         <p class="text-sm text-blue-800 italic">

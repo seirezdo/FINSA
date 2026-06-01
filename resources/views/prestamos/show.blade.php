@@ -71,11 +71,9 @@
                                         </h3>
                                         
                                         <div class="space-y-4">
-                                            
-                                          <!-- NUEVO CAMPO: Fecha de Recuperación -->
+                                            <!-- NUEVO CAMPO: Fecha de Recuperación -->
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700">Fecha del Abono / Recuperación</label>
-                                                {{-- Usamos type="date" para que muestre el calendario --}}
                                                 <input type="date" name="fecha_pago" required
                                                     value="{{ date('Y-m-d') }}" 
                                                     max="{{ date('Y-m-d') }}"
@@ -99,9 +97,8 @@
                                                     <option value="transferencia">Transferencia</option>
                                                 </select>
                                             </div>
-                                            
                                         </div>
-                                    </div>
+                                    </div> <!-- FIN CONTENEDOR MODAL CORREGIDO -->
                                     
                                     <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                                         <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
@@ -127,7 +124,7 @@
                             <span class="text-xs uppercase text-gray-400">Auditoría de Pagos Reales</span>
                         </div>
                         
-    <div class="overflow-x-auto">
+                        <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr class="text-center">
@@ -135,127 +132,123 @@
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Esperado</th>
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-green-700">Recuperado</th>
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                        <!-- NUEVA COLUMNA DE ACCIONES -->
                                         <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                     </tr>
                                 </thead>
-                               <tbody class="bg-white divide-y divide-gray-200 text-center">
-    @foreach($prestamo->calendarioPagos as $cuota)
-       @php
-        $totalAbonado = $cuota->pagos->sum('monto_pagado');
-        $restante = $cuota->monto_esperado - $totalAbonado;
-        
-        // 1. Extraemos la fecha real de la cuota
-        $vencimiento = \Carbon\Carbon::parse($cuota->fecha_vencimiento);
-        
-        // 2. 🔥 NUEVA LÓGICA DE CORTE 🔥
-        // Calculamos cuál fue el último sábado que pasó (o el de hoy si es sábado)
-        $sabadoObjetivo = now()->isSaturday() 
-                            ? now()->startOfDay() 
-                            : now()->previous('Saturday')->startOfDay();
-        
-        // 3. Verificamos si esta cuota es exactamente la del sábado con el que estamos trabajando
-        $esSemanaActual = $vencimiento->isSameDay($sabadoObjetivo);
-    @endphp
-    
-    <tr class="{{ $cuota->numero_semana > 12 ? 'bg-red-50' : 'hover:bg-gray-50' }} transition">
-        
-        {{-- COLUMNA 1: FECHA REAL (Ya no dice solo Semana 1) --}}
-        <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm font-bold text-gray-900">
-                {{ $vencimiento->format('d/m/Y') }}
-            </div>
-            <div class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
-                Semana {{ $cuota->numero_semana }}
-            </div>
-            @if($cuota->numero_semana > 12)
-            <span class="text-[10px] font-black text-red-600 uppercase animate-pulse">Extensión por Mora</span>
-            @endif
-        </td>
+                                <tbody class="bg-white divide-y divide-gray-200 text-center">
+                                    @foreach($prestamo->calendarioPagos as $cuota)
+                                       @php
+                                        $totalAbonado = $cuota->pagos->sum('monto_pagado');
+                                        $restante = $cuota->monto_esperado - $totalAbonado;
+                                        
+                                        // 1. Extraemos la fecha real de la cuota
+                                        $vencimiento = \Carbon\Carbon::parse($cuota->fecha_vencimiento);
+                                        
+                                        // 2. 🔥 NUEVA LÓGICA DE CORTE 🔥
+                                        // Calculamos cuál fue el último sábado que pasó (o el de hoy si es sábado)
+                                        $sabadoObjetivo = now()->isSaturday() 
+                                                            ? now()->startOfDay() 
+                                                            : now()->previous('Saturday')->startOfDay();
+                                        
+                                        // 3. Verificamos si esta cuota es exactamente la del sábado con el que estamos trabajando
+                                        $esSemanaActual = $vencimiento->isSameDay($sabadoObjetivo);
+                                    @endphp
+                                    
+                                    <tr class="{{ $cuota->numero_semana > 12 ? 'bg-red-50' : 'hover:bg-gray-50' }} transition">
+                                        
+                                        {{-- COLUMNA 1: FECHA REAL --}}
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-bold text-gray-900">
+                                                {{ $vencimiento->format('d/m/Y') }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
+                                                Semana {{ $cuota->numero_semana }}
+                                            </div>
+                                            @if($cuota->numero_semana > 12)
+                                                <span class="text-[10px] font-black text-red-600 uppercase animate-pulse">Extensión por Mora</span>
+                                            @endif
+                                        </td>
 
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${{ number_format($cuota->monto_esperado, 2) }}</td>
-        
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-            ${{ number_format($totalAbonado, 2) }}
-            @if($cuota->pagos->count() > 1)
-            <span class="block text-[9px] text-gray-400 italic">({{ $cuota->pagos->count() }} abonos)</span>
-            @endif
-        </td>
+                                        {{-- COLUMNA 2: ESPERADO --}}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            ${{ number_format($cuota->monto_esperado, 2) }}
+                                        </td>
+                                        
+                                        {{-- COLUMNA 3: RECUPERADO --}}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+                                            ${{ number_format($totalAbonado, 2) }}
+                                            @if($cuota->pagos->count() > 1)
+                                                <span class="block text-[9px] text-gray-400 italic">({{ $cuota->pagos->count() }} abonos)</span>
+                                            @endif
+                                        </td>
 
-        <td class="px-6 py-4 whitespace-nowrap">
-            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm 
-                {{ in_array($cuota->estado, ['pagado', 'recuperado']) ? 'bg-green-100 text-green-800 border border-green-200' : 
-                  ($cuota->estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 
-                  'bg-red-100 text-red-800 border border-red-200') }}">
-                {{ strtoupper($cuota->estado) }}
-            </span>
-        </td>
-        
-        {{-- COLUMNA ACCIONES: Aplicando tu regla estricta --}}
-                <td class="px-2 py-4">
-            {{-- flex-wrap y gap-2 permiten que los botones se acomoden en dos líneas si no caben --}}
-            <div class="flex flex-wrap items-center justify-center gap-2">
-                @if($cuota->estado === 'pendiente' || $cuota->estado === 'falla')
-                    
-                    {{-- BOTÓN A: AGREGAR ABONO --}}
-                    <form action="{{ route('pagos.registrar') }}" method="POST" class="flex items-center gap-1 m-0">
-                        @csrf
-                        <input type="hidden" name="calendario_pago_id" value="{{ $cuota->id }}">
-                        
-                        {{-- Achicamos el input (w-16) y la fuente (text-xs) --}}
-                        <input type="number" name="monto_pagado" step="0.01" min="1" max="{{ $restante }}" value="{{ $restante > 0 ? $restante : '' }}" class="border border-gray-300 rounded px-1 py-1 w-16 text-xs text-center" required placeholder="$">
-                        
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold">
-                            Abonar
-                        </button>
-                    </form>
+                                        {{-- COLUMNA 4: ESTADO --}}
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm 
+                                                {{ in_array($cuota->estado, ['pagado', 'recuperado']) ? 'bg-green-100 text-green-800 border border-green-200' : 
+                                                  ($cuota->estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 
+                                                  'bg-red-100 text-red-800 border border-red-200') }}">
+                                                {{ strtoupper($cuota->estado) }}
+                                            </span>
+                                        </td>
+                                        
+                                        {{-- COLUMNA 5: ACCIONES BLINDADA 🔥 --}}
+                                        <td class="px-2 py-4">
+                                            <div class="flex flex-wrap items-center justify-center gap-2">
+                                                
+                                                {{-- LA MAGIA: Si debe dinero y es cobrable, se muestra la cajita --}}
+                                                @if(in_array($cuota->estado, ['pendiente', 'falla', 'falla_penalizada']) && $restante > 0)
+                                                    
+                                                    {{-- BOTÓN A: AGREGAR ABONO --}}
+                                                    <form action="{{ route('pagos.registrar') }}" method="POST" class="flex items-center gap-1 m-0">
+                                                        @csrf
+                                                        <input type="hidden" name="calendario_pago_id" value="{{ $cuota->id }}">
+                                                        <input type="number" name="monto_pagado" step="0.01" min="1" max="{{ $restante }}" value="{{ $restante > 0 ? $restante : '' }}" class="border border-gray-300 rounded px-1 py-1 w-16 text-xs text-center" required placeholder="$">
+                                                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold">
+                                                            Abonar
+                                                        </button>
+                                                    </form>
 
-                    {{-- BOTÓN B: COLOCAR FALLA --}}
-                    @if($cuota->estado === 'pendiente')
-                        @if($esSemanaActual)
-                            <form action="{{ route('pagos.update', $cuota->id) }}" method="POST" class="m-0">
-                                @csrf
-                                @method('PUT')
-                                <input type="hidden" name="accion" value="falla">
-                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold" onclick="return confirm('¿Confirmar falla por los ${{ number_format($restante, 2) }} restantes?')">
-                                    Falla
-                                </button>
-                            </form>
-                        @else
-                            {{-- Mensaje de protección visual más compacto --}}
-                            <span class="text-[9px] text-gray-400 italic px-1 text-center leading-tight">Solo<br>actual</span>
-                        @endif
-                    @endif
+                                                    {{-- BOTÓN B: COLOCAR FALLA (Solo si está 'pendiente') --}}
+                                                    @if($cuota->estado === 'pendiente')
+                                                        @if($esSemanaActual)
+                                                            <form action="{{ route('pagos.update', $cuota->id) }}" method="POST" class="m-0">
+                                                                @csrf
+                                                                @method('PUT')
+                                                                <input type="hidden" name="accion" value="falla">
+                                                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold" onclick="return confirm('¿Confirmar falla por los ${{ number_format($restante, 2) }} restantes?')">
+                                                                    Falla
+                                                                </button>
+                                                            </form>
+                                                        @else
+                                                            <span class="text-[9px] text-gray-400 italic px-1 text-center leading-tight">Solo<br>actual</span>
+                                                        @endif
+                                                    @endif
 
-                    {{-- BOTÓN C: RECUPERAR --}}
-                    @if($cuota->estado === 'falla')
-                        <form action="{{ route('pagos.update', $cuota->id) }}" method="POST" class="m-0">
-                            @csrf
-                            @method('PUT')
-                            <input type="hidden" name="accion" value="recuperado">
-                            <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold">
-                                Recuperar
-                            </button>
-                        </form>
-                    @endif
+                                                    {{-- BOTÓN C: RECUPERAR (Para fallas y multadas) --}}
+                                                    @if(in_array($cuota->estado, ['falla', 'falla_penalizada']))
+                                                        <form action="{{ route('pagos.update', $cuota->id) }}" method="POST" class="m-0">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <input type="hidden" name="accion" value="recuperado">
+                                                            <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded shadow-sm transition text-xs font-semibold">
+                                                                Recuperar
+                                                            </button>
+                                                        </form>
+                                                    @endif
 
-                @elseif($cuota->estado === 'pagado' || $cuota->estado === 'recuperado')
-                    <span class="text-green-600 font-bold flex items-center text-xs">
-                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg>
-                        Cerrada
-                    </span>
-                @elseif($cuota->estado === 'falla_penalizada')
-                    <span class="text-red-600 font-bold flex items-center text-xs">
-                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
-                        Multada
-                    </span>
-                @endif
-            </div>
-        </td>
-
-    </tr>
-    @endforeach
-</tbody>
+                                                {{-- Si la cuota ya se liquidó, mostramos que está cerrada --}}
+                                                @elseif(in_array($cuota->estado, ['pagado', 'recuperado']))
+                                                    <span class="text-green-600 font-bold flex items-center text-xs">
+                                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg>
+                                                        Cerrada
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
                             </table>
                         </div>
                     </div>
